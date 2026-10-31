@@ -1,5 +1,17 @@
 # FE Migration V2 — 엔딩 대사·정리 카드·추가 감정 이미지
 
+## 감정 회복 · 전체 대화 영상/PDF 내보내기 (2026-11-01)
+
+- PR #49(miod4198)의 보고서·국제화·공유·학습 동선 변경을 포함한다. 최종 보고서의 캐릭터는 기존 전신 `EndingDialogue`와 마지막 대사·다시 듣기, 정리 카드 형태를 유지한다.
+- `session.affect` / `turn.affect`: `{strain:0..6, emotion:"angry"|"sad", stage:"hurt"|"guarded"|"softening"}` 또는 null. 충분한 사과로 `repair`가 해제되어도 감정은 남을 수 있다. 심각도·반복·성격에 따라 회복 기간이 달라진다. FE가 O 판정만으로 웃는 표정으로 바꾸지 말고 `render`, `emotion`, 서버 음성을 그대로 사용한다. 재시도·재접속도 이 상태를 보존한다.
+- `POST /sessions/{id}/exports` `{format:"video"|"pdf", language:"ko"|"en"|"ja"|"zh", retry?:true}` → `{id, format, language, status, stage, error, bytes, durationSeconds}`. 완료된 본인 세션만 가능. 같은 세션/언어/형식은 재사용하며 동시에 2개까지 생성한다.
+- `GET /sessions/{id}/exports?language=en`으로 상태 복원. `queued/running`일 때만 주기적으로 확인한다. 생성 중 다른 학습을 할 수 있으며, 허용된 웹 푸시가 있으면 완료 알림에서 결과 화면을 연다.
+- `POST /exports/{id}/download` `{}` → `{url, filename, mimeType, expiresIn:600}`. 사용자 인증으로 받은 10분 유효 링크이며, 서버 파일은 공개 버킷에 올리지 않는다. 만료 시 새 링크를 요청한다.
+- 영상: H.264/AAC MP4, 540×960. 전체 대화 순서·배경·표정·단서·자막·내 답변·판정·마지막 점수 화면을 저장한다. 캐릭터 음성은 동일한 TTS 캐시를 사용한다. **학습 기록 재생 영상이며 실제 기기 화면 녹화가 아니다. 사용자 원본 녹음은 기존에 보관하지 않아 내 발언은 텍스트로 포함한다.** 긴 글은 다음 화면에 이어 표시한다.
+- PDF: 선택한 표시 언어로 요약·점수·잘한 점·개선할 점·아쉬운 점·문화 팁·모든 대화 상세를 저장한다. 한국어 연습 문장은 원문을 유지한다. 한·중·일 폰트를 포함한다.
+- FE `ExportCard`는 완료 결과와 알림으로 다시 연 결과에서 제공한다. 웹은 준비 후 다시 누르는 저장 버튼으로 파일 공유 또는 다운로드. 브라우저에서 갤러리에 강제 저장할 수는 없으며 공유 메뉴의 영상 저장 기능을 이용한다. 네이티브 앱은 expo-media-library `Asset.create`로 갤러리 저장, PDF는 expo-sharing으로 저장 위치 선택. 권한 요청은 영상 저장을 눌렀을 때만 한다. 신규 네이티브 모듈/권한이므로 설치형 앱은 개발 빌드를 다시 만든다.
+- 데모의 로컬 대본 기록에는 서버 세션이 없어서 서버 내보내기 버튼을 표시하지 않는다. 이 기능은 완료한 실제 BE 세션을 대상으로 한다.
+
 ## 무례한 말·불명확한 말 이후의 사과와 설명 (2026-11-01)
 
 - BE가 `session.repair`에 해결되지 않은 상황을 저장한다. `kind=apology`는 무례한 말에 대한 사과·설명, `clarification`은 뜻 확인이다. `issue`, `triggerText`, `resumeNpcText`는 원인이 된 말과 복귀할 맥락이며 일반 화면에 새 안내판을 띄울 필요는 없다.

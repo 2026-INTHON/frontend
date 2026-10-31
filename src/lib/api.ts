@@ -8,6 +8,7 @@ export const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://inthon-demo
 export type Emotion = 'neutral' | 'happy' | 'confused' | 'sad' | 'angry';
 export type SpeechLevel = 'polite' | 'casual';
 export type Mark4 = 'O' | '△' | 'X' | '?';
+export type LearningExport = {id:string;format:'video'|'pdf';language:string;status:'queued'|'running'|'ready'|'failed';stage:string;error:{code:string;message:string;retryable:boolean}|null;bytes:number|null;durationSeconds:number|null};
 
 // 캐릭터 표정·몸짓 이미지 (서버가 고른 것을 그대로 써요)
 export type Render = { characterId?: string; emotion?: Emotion; gesture?: string; assetKey?: string; imageUrl?: string | null };
@@ -263,6 +264,9 @@ async function startSession(sceneId: string, o: { personalityId?: string; subtit
 }
 
 export const api = {
+  exports: (id:string,language:string) => call<LearningExport[]>(`/sessions/${id}/exports?${qs({language})}`),
+  makeExport: (id:string,format:'video'|'pdf',language:string,retry=false) => call<LearningExport>(`/sessions/${id}/exports`,{method:'POST',body:JSON.stringify({format,language,retry})}),
+  exportDownload: (id:string) => call<{url:string;filename:string;mimeType:string}>(`/exports/${id}/download`,{method:'POST',body:'{}'}),
   get: <T>(path: string) => call<T>(path, {}, true, 10000),
   health: () => call<{ status?: string }>('/health', {}, false, 5000),
   scenes: (q: { pack?: string; characterId?: string; personalityId?: string }) => call<ApiScene[]>('/scenes?' + qs(q), {}, false),
