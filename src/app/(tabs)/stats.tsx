@@ -50,8 +50,7 @@ export default function Stats() {
         </Card>
       ) : (
         <Card style={{ gap: 10 }}>
-          <T s="h3">아직 기록이 없어요</T>
-          <T s="sub">장면 하나를 끝내면 점수와 연속 출석이 여기에 쌓여요.</T>
+          <T s="h3">첫 장면을 시작해 보세요</T>
           <Btn label="장면 시작하기" small icon="play" onPress={() => router.push('/home')} />
         </Card>
       )}

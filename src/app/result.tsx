@@ -62,7 +62,7 @@ export default function Result() {
             </View>
             <View style={{ flex: 1 }}>
               <T s="h3">연속 {r.streakDays}일째!</T>
-              <T s="sub">{r.streakDays >= 7 ? '일주일 넘게 매일 말로 했어요' : '내일도 한 장면이면 이어져요'}</T>
+              <T s="sub">{r.streakDays >= 7 ? '7일 연속 연습' : '내일도 한 장면이면 이어져요'}</T>
             </View>
           </Card>
         ) : null}
@@ -83,49 +83,49 @@ export default function Result() {
         {/* 학습 성취도 3가지 (서버 값이 없으면 측정값 없음) */}
         <Card style={{ gap: 14 }}>
           <T s="label">이번 장면 성취도</T>
-          <Meter k="달성률" d="대사마다 의도를 전달했는지" v={r.reach} />
-          <Meter k="추론" d="힌트 없이 속마음을 읽었는지" v={r.infer} />
-          <Meter k="자립 표현" d="모국어 없이 존댓말·간접 표현을 썼는지" v={r.self} />
+          <Meter k="달성률" d="대사마다 의도를 전달한 비율" v={r.reach} />
+          <Meter k="힌트 없이 답하기" v={r.infer} />
+          <Meter k="도움 없이 말하기" v={r.self} />
         </Card>
         {r.best ? (
           <Card>
-            <T s="small">잘한 말</T>
+            <T s="small">잘한 표현</T>
             <T s="body" style={{ marginTop: 4 }}>"{r.best}"</T>
           </Card>
         ) : null}
         {r.worst ? (
           <Card onPress={() => router.push('/mistakes')}>
-            <T s="small" style={{ color: C.red }}>아쉬운 말</T>
+            <T s="small" style={{ color: C.red }}>복습할 표현</T>
             <T s="body" style={{ marginTop: 4 }}>"{r.worst}"</T>
-            <T s="small" style={{ marginTop: 8 }}>오답 도감에 저장했어요 · 보러 가기</T>
+            <T s="small" style={{ marginTop: 8 }}>복습 노트에 저장했어요</T>
           </Card>
         ) : null}
         {/* 서버 상세 보고서 (데모 모드엔 없음) */}
         {r.sessionId && !st.demo ? <ReportCard sessionId={r.sessionId} /> : null}
         {st.coins >= 150 ? <Btn label="코인으로 꾸미러 가기" kind="line" icon="shopping-bag" onPress={() => router.push('/dress')} /> : null}
-        <Btn label="홈으로" kind="ghost" small icon="home" onPress={() => router.replace('/home')} />
+        {next ? <Btn label="홈으로" kind="ghost" small icon="home" onPress={() => router.replace('/home')} /> : null}
       </ScrollView>
       <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16 }}>
         {/* 다시 도전: 서버는 retry 로 새 세션 (기존 결과는 그대로) */}
-        <Btn label="다시 도전" kind="line" icon="rotate-ccw" style={{ flex: 1 }} onPress={() => router.replace({ pathname: '/scene/[id]', params: live ? { id: r.sceneId, retryOf: r.sessionId! } : { id: r.sceneId } })} />
-        {/* 계속 학습: 다음 장면이 있으면 바로, 없으면 챕터 목록 */}
-        <Btn label="계속 학습" icon="arrow-right" style={{ flex: 1.3 }} onPress={() => (next ? router.replace({ pathname: '/scene/[id]', params: { id: next } }) : router.replace('/episodes'))} />
+        <Btn label="다시 연습하기" kind="line" icon="rotate-ccw" style={{ flex: 1 }} onPress={() => router.replace({ pathname: '/scene/[id]', params: live ? { id: r.sceneId, retryOf: r.sessionId! } : { id: r.sceneId } })} />
+        {/* 버튼 이름 = 실제 이동: 다음 장면이 있으면 '다음 장면', 없으면 '홈으로' */}
+        {next ? <Btn label="다음 장면" icon="arrow-right" style={{ flex: 1.3 }} onPress={() => router.replace({ pathname: '/scene/[id]', params: { id: next } })} /> : <Btn label="홈으로" icon="home" style={{ flex: 1.3 }} onPress={() => router.replace('/home')} />}
       </View>
     </Screen>
   );
 }
 
-function Meter({ k, d, v }: { k: string; d: string; v: number | null }) {
+function Meter({ k, d, v }: { k: string; d?: string; v: number | null }) {
   return (
     <View style={{ gap: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
         <T s="label" style={{ flex: 1 }}>{k}</T>
-        {v == null ? <T s="small">측정값 없음</T> : <T s="h3">{v}%</T>}
+        {v == null ? <T s="small">기록 없음</T> : <T s="h3">{v}%</T>}
       </View>
       <View style={{ height: 8, borderRadius: 4, backgroundColor: C.bg, overflow: 'hidden' }}>
         {v != null ? <View style={{ width: `${v}%`, height: 8, borderRadius: 4, backgroundColor: C.ink }} /> : null}
       </View>
-      <T s="small">{d}</T>
+      {d ? <T s="small">{d}</T> : null}
     </View>
   );
 }

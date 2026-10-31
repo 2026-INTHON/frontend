@@ -38,7 +38,7 @@ export default function Welcome() {
             }
           }}
         />
-        <Btn label="서버 없이 데모로 둘러보기" kind="ghost" small onPress={() => { setDemo(true); router.push('/onboarding/pack'); }} />
+        <Btn label="로그인 없이 시작하기" kind="ghost" small onPress={() => { setDemo(true); router.push('/onboarding/pack'); }} />
         {acc.msg && acc.enabled !== false ? <T s="small" style={{ textAlign: 'center' }}>{acc.msg}</T> : null}
       </View>
     </Screen>

@@ -43,7 +43,7 @@ export default function Home() {
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, marginTop: 8, gap: 8 }}>
         {st.streak > 0 ? <Tag label={`🔥 연속 ${st.streak}일`} tone="white" /> : <Tag label="오늘 첫 장면을 끝내면 연속 1일" tone="white" />}
-        {st.demo ? <Tag label="데모 모드" tone="grey" /> : null}
+        {st.demo ? <Tag label="예시 대화 체험 중" tone="grey" /> : null}
         <View style={{ flex: 1 }} />
         <CoinPill />
       </View>
@@ -66,8 +66,8 @@ export default function Home() {
       </Pressable>
 
       <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 24, marginTop: 12 }}>
-        <Tile icon="grid" t="다른 장면" s="에피소드 목록" onPress={() => router.push('/episodes')} />
-        <Tile icon="user" t="캐릭터 바꾸기" s="캐릭터 목록" onPress={() => router.push('/characters')} />
+        <Tile icon="grid" t="다른 장면" s="챕터 목록" onPress={() => router.push('/episodes')} />
+        <Tile icon="user" t="대화 상대 바꾸기" s="캐릭터 목록" onPress={() => router.push('/characters')} />
       </View>
       <View style={{ paddingHorizontal: 24, paddingVertical: 12 }}>
         <Btn label={next.btn} icon="play" onPress={go} />
@@ -84,7 +84,7 @@ function useToday(demo: boolean, char: CharId, persona: PersonaId, pack: 'ko' | 
     if (!need || demo) return;
     let alive = true;
     resolveTodayScene(char, persona, pack)
-      .then((r) => alive && setS(r ? { key, ...r } : { key, err: '지금 열린 장면이 없어요. 에피소드 목록을 확인해 주세요.' }))
+      .then((r) => alive && setS(r ? { key, ...r } : { key, err: '지금 열린 장면이 없어요.' }))
       .catch(() => alive && setS({ key, err: '장면 목록을 불러오지 못했어요. 눌러서 바로 시작할 수 있어요.' }));
     return () => {
       alive = false;

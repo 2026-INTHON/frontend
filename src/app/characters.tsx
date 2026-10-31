@@ -58,7 +58,7 @@ export default function Characters() {
           );
         })}
         <Pressable onPress={() => router.push('/persona-create')} style={{ height: 56, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <T s="label">+ 나만의 페르소나 만들기</T>
+          <T s="label">+ 나만의 캐릭터 만들기</T>
           <T s="small">구독 주 1회 · 생성권</T>
         </Pressable>
       </ScrollView>

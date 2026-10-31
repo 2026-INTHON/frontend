@@ -7,7 +7,7 @@ import { CharId, Cue, Line, PersonaId, Place, PLACE_OF, SERVER_CHAR, SERVER_PERS
 // - mock: 사용자가 설정에서 '데모 모드'를 켰을 때만 쓰는 앱 안 대본.
 
 export type Mark = 'O' | '△' | 'X' | '?';
-export const MARK_LABEL: Record<Mark, string> = { O: '통했어', '△': '더 말해 줘', X: '말실수', '?': '다시 말해 줘' };
+export const MARK_LABEL: Record<Mark, string> = { O: '의도 전달 성공', '△': '구체적인 설명 필요', X: '말실수', '?': '의도 불명확' };
 
 export type View3 = { who: string; meaning: string; cue: string };
 export type Out = {
@@ -258,7 +258,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
         recap: {
           title: scene.title,
           story: scene.situation,
-          comment: failed ? '단서를 다시 보고 표현을 바꿔 보면 결말이 달라져요.' : st.mistakes ? '실수했지만 고쳐 말하면서 끝까지 해냈어요.' : '상황에 맞는 답변만 쏙쏙 골라 했어요!',
+          comment: failed ? '단서를 다시 보고 표현을 바꿔 보면 결말이 달라져요.' : st.mistakes ? '실수했지만 고쳐 말하면서 끝까지 해냈어요.' : '상황에 맞는 답변',
           prompt: failed ? '힌트를 먼저 보고 다시 도전해 볼까요?' : '다음 장면에서 이어서 연습해 봐요.',
           tr: null,
         },
@@ -382,9 +382,9 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         lifeDelta: r.turn.lifeDelta ?? 0,
         tone: f.tone?.label ?? null,
         // 서버가 측정하지 않은 값은 지어내지 않아요
-        speed: isVoice ? (f.speed ? `${f.speed.value} ${f.speed.unit}` : '측정 안 함') : null,
-        hesitation: isVoice ? (f.hesitation ? `"음…" ${f.hesitation.fillerCount}번 · 멈춤 ${f.hesitation.pauseCount}번` : '측정 안 함') : null,
-        ending: isVoice ? (typeof f.ending === 'string' ? f.ending : (f.ending?.label ?? '측정 안 함')) : null,
+        speed: isVoice ? (f.speed ? `${f.speed.value} ${f.speed.unit}` : '측정 불가') : null,
+        hesitation: isVoice ? (f.hesitation ? `"음…" ${f.hesitation.fillerCount}번 · 멈춤 ${f.hesitation.pauseCount}번` : '측정 불가') : null,
+        ending: isVoice ? (typeof f.ending === 'string' ? f.ending : (f.ending?.label ?? '측정 불가')) : null,
         tip: f.message ?? '',
         better: f.betterExpression ?? '',
         why: ev?.reason ?? f.reason ?? '',
@@ -468,7 +468,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
 export async function createEngine(sceneId: string, o: { demo: boolean; pack: 'ko' | 'en'; lang: string; char: CharId; persona: PersonaId; retryOf?: string }): Promise<Engine> {
   if (o.demo) {
     const local = sceneId === 'today' ? sceneForChar(o.char) : sceneById(sceneId);
-    if (!local) throw new SceneError('not_found', '데모 대본에 없는 장면이에요.');
+    if (!local) throw new SceneError('not_found', '예시 대화에 없는 장면이에요.');
     return mockEngine(local, o.persona, o.pack);
   }
   return liveEngine(sceneId, o);
