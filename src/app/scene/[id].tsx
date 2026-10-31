@@ -16,7 +16,7 @@ import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
 import { TurnRec, useStore } from '../../lib/store';
 import { shareConversation } from '../../lib/share-log';
 import { useLang, useT } from '../../lib/i18n';
-import { reactionCopy } from '../../lib/learning-copy';
+import { reactionCopy, speechErrorCopy } from '../../lib/learning-copy';
 import { CharacterActor } from '../../components/character-actor';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized';
@@ -197,10 +197,11 @@ export default function SceneScreen() {
           });
           pl.play();
         });
-      } catch {
+      } catch (error) {
+        // 음성 생성량 초과(DAILY_QUOTA_EXCEEDED)면 자막으로 계속하라고, 그 밖엔 다시 듣기 안내
         if (request !== voiceRequest.current) return;
         setPlaying(false);
-        setNotice(t('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.'));
+        setNotice(speechErrorCopy(error, lang));
         return;
       }
     }

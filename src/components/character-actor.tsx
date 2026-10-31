@@ -35,7 +35,8 @@ export function CharacterActor({uri, fallback, emotion='neutral', eventKey, top,
     let alive=true;
     const loaded=uri?Image.prefetch(uri):Promise.resolve(false);
     const show=(image:string|null)=>{if(alive){setShown({uri:image,key:eventKey});setVisible(!!eventKey);}};
-    loaded.then(ok=>show(ok?uri:null)).catch(()=>show(null));
+    // RN resolves true; react-native-web resolves void on a successful prefetch.
+    loaded.then(ok=>show(ok===false?null:uri)).catch(()=>show(null));
     return()=>{alive=false;};
   },[uri,eventKey]);
   useEffect(()=>{
@@ -61,7 +62,7 @@ export function CharacterActor({uri, fallback, emotion='neutral', eventKey, top,
   const label=reactionCopy(lang)[emotion];
   return <View pointerEvents="none" style={StyleSheet.absoluteFill}>
     <Animated.Image source={shown.uri?{uri:shown.uri}:fallback} onError={()=>setShown(old=>({...old,uri:null}))}
-      style={{position:'absolute',top,alignSelf:'center',width:'62%',height:'72%',opacity:actor}}
+      style={{position:'absolute',top,alignSelf:'center',width:shown.uri?'100%':'62%',height:'72%',opacity:actor}}
       resizeMode="contain" accessibilityLabel={`${name} · ${label}`} />
     {visible&&active&&emotion!=='neutral'?<Animated.View accessible accessibilityLabel={`${name} · ${label}`} accessibilityLiveRegion="polite"
       style={{position:'absolute',top:top+80,right:'8%',width:66,minHeight:76,borderRadius:24,borderBottomLeftRadius:5,backgroundColor:C.white,borderWidth:1,borderColor:C.line,alignItems:'center',justifyContent:'center',gap:4,paddingVertical:10,opacity:bubble,

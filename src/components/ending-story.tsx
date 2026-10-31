@@ -70,12 +70,12 @@ export function EndingDialogue({ ending, char, sessionId, pack }: { ending: Endi
     await speak(d.text, {char,persona,emotion:ending.emotion,lang:pack==='ko'?'ko-KR':'en-US',onDone:()=>setState('idle'),onError:()=>setState('error')});
   }
 
-  // 표정: 서버가 고른 이미지(배경 있음)는 둥근 카드 안에, 없으면 앱 캐릭터
+  // 서버 이미지도 세로 전신 캐릭터다. cover로 확대하면 얼굴이 잘리므로 전체를 표시한다.
   const src = ending.image ? { uri: ending.image } : IMG.char[char];
   return (
     <Card style={{ padding: 0, overflow: 'hidden' }}>
       <View style={{ backgroundColor: ending.image ? C.bg : '#EFEDE7', height: 300, alignItems: 'center', justifyContent: 'flex-end' }}>
-        <Image source={src} style={{ width: '100%', height: '100%' }} resizeMode={ending.image ? 'cover' : 'contain'} accessibilityLabel={t('{name}의 마지막 표정', { name: t(ch.name) })} />
+        <Image source={src} style={{ width: '100%', height: '100%' }} resizeMode="contain" accessibilityLabel={t('{name}의 마지막 표정', { name: t(ch.name) })} />
         <View style={{ position: 'absolute', top: 12, left: 12 }}>
           <Tag label={ending.kind === 'happy' ? t('해피 엔딩') : t('아쉬운 엔딩')} tone={ending.kind === 'happy' ? 'lime' : 'white'} />
         </View>

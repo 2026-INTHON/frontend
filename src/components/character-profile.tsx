@@ -38,9 +38,9 @@ export function CharacterProfileOverlay({ char, persona, open, onOpenChange }: {
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       {open ? (
         <View style={styles.panel}>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: 68, gap: 14 }} accessibilityLabel={`${name} · ${copy.title}`}>
-            <View style={{ gap: 8 }}>
-              <T s="h2">{name} · {copy.title}</T>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }} accessibilityLabel={`${name} · ${copy.title}`}>
+            <View style={{ gap: 8, paddingRight: 42, marginBottom: 8, flexDirection:'row',flexWrap:'wrap',alignItems:'center' }}>
+              <T s="h2" style={{fontSize:20}}>{copy.title}</T>
               {selected ? <Tag label={selected.personalityName} tone="lime" /> : null}
             </View>
             {error ? (
@@ -72,7 +72,7 @@ export function CharacterProfileOverlay({ char, persona, open, onOpenChange }: {
 }
 
 function Detail({ label, text }: { label: string; text: string }) {
-  return <View style={{gap:3}}><T s="small">{label}</T><T s="body" style={{fontSize:15,lineHeight:22}}>{text}</T></View>;
+  return <View style={{gap:10,flexDirection:'row',alignItems:'flex-start'}}><T s="small" style={{width:82,lineHeight:22}}>{label}</T><T s="body" style={{flex:1,fontSize:14,lineHeight:22}}>{text}</T></View>;
 }
 const styles = StyleSheet.create({
   panel: { flex: 1, backgroundColor: C.profileSurface },
