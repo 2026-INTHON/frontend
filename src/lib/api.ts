@@ -197,6 +197,14 @@ export type SessionReport = {
   };
 };
 
+export type GenerationJob = {
+  id: string; label: string; characterId: string; personalityId: string;
+  status: 'queued' | 'running' | 'ready' | 'failed';
+  stage: string; chapterId: string | null;
+  error: { code: string; message: string; retryable: boolean } | null;
+  createdAt: string; updatedAt: string;
+};
+
 const qs = (q: Record<string, string | undefined>) => new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString();
 const isNetErr = (e: unknown) => !(e instanceof ApiError) || e.status >= 500;
 
@@ -227,6 +235,11 @@ export const api = {
   report: (id: string) => call<SessionReport>(`/sessions/${id}/report`),
   makeReport: (id: string) => call<SessionReport>(`/sessions/${id}/report`, { method: 'POST', body: '{}' }),
   retryReport: (id: string) => call<SessionReport>(`/sessions/${id}/report/retry`, { method: 'POST', body: '{}' }),
+  // 나만의 챕터 생성: 200 은 '작업 접수'일 뿐 완성이 아니에요
+  generate: (b: { clientRequestId: string; prompt: string; characterId: string; personalityId: string; pack: string; lessonCount: number }) =>
+    call<GenerationJob>('/chapter-generations', { method: 'POST', body: JSON.stringify(b) }, true, 30000),
+  generations: () => call<GenerationJob[] | { items: GenerationJob[] }>('/chapter-generations', {}, true, 10000).then((d) => (Array.isArray(d) ? d : (d?.items ?? []))),
+  retryGeneration: (id: string) => call<GenerationJob>(`/chapter-generations/${id}/retry`, { method: 'POST', body: '{}' }),
   result: (id: string) => call<SessionResult>(`/sessions/${id}/result`),
   // 반응 대사는 {turnId}, 지금 노드 대사는 {} (서명 URL은 10분 유효)
   speech: (id: string, turnId?: string) => call<{ audioUrl: string }>(`/sessions/${id}/speech`, { method: 'POST', body: JSON.stringify(turnId ? { turnId } : {}) }, true, 20000),

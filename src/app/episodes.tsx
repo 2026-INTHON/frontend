@@ -8,6 +8,7 @@ import { C } from '../lib/theme';
 import { CHAPTERS, CHARACTERS, CharId, IMG, PERSONAS, SERVER_CHAR, charById } from '../lib/data';
 import { api } from '../lib/api';
 import { useStore } from '../lib/store';
+import { useGenerationJobs } from '../lib/generations';
 
 // 화면에 그릴 챕터 모양 (서버 /chapters 또는 데모 대본)
 type Sub = { id: string; title: string; sceneId: string | null; state: 'done' | 'now' | 'open' | 'locked'; grade?: string | null; ready: boolean };
@@ -36,6 +37,9 @@ export default function Episodes() {
   const persona = PERSONAS[char].find((p) => p.id === st.persona) ?? PERSONAS[char][2];
 
   const [tick, setTick] = useState(0); // 다시 시도
+  // 생성 작업: ready 가 되면 챕터 목록을 다시 불러와요
+  const gen = useGenerationJobs(!st.demo, () => setTick((t) => t + 1));
+  const myJobs = gen.jobs.filter((j) => j.characterId === SERVER_CHAR[char] && j.status !== 'ready');
   const key = `${char}-${st.pack}-${tick}`;
   const [res, setRes] = useState<{ key: string; list?: Chapter[]; err?: string } | null>(null);
   useEffect(() => {
@@ -86,6 +90,24 @@ export default function Episodes() {
         {st.demo ? <Tag label="데모 대본" tone="grey" /> : null}
       </View>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 12 }}>
+        {/* 생성 중·실패한 나만의 챕터 (퍼센트 게이지 없이 단계만) */}
+        {myJobs.map((j) => (
+          <View key={j.id} style={{ backgroundColor: C.white, borderRadius: 20, padding: 14, gap: 6, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.ink }}>
+            <T s="small">나만의 챕터</T>
+            <T s="h3">{j.label || '새 챕터'}</T>
+            {j.status === 'failed' ? (
+              <>
+                <T s="small">{j.error?.message ?? '만들지 못했어요.'}</T>
+                {j.error?.retryable !== false ? <Btn label="이어서 다시 만들기" small kind="line" icon="rotate-cw" onPress={() => api.retryGeneration(j.id).then(() => gen.refresh()).catch(() => null)} /> : null}
+              </>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <ActivityIndicator color={C.ink} size="small" />
+                <T s="small">생성중… 다른 장면을 하면서 기다려도 돼요</T>
+              </View>
+            )}
+          </View>
+        ))}
         {err ? (
           <View style={{ backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 10 }}>
             <T s="label">{err}</T>
@@ -152,6 +174,12 @@ export default function Episodes() {
             </View>
           );
         })}
+        {!st.demo ? (
+          <Pressable onPress={() => router.push('/chapter-create')} accessibilityRole="button" style={{ height: 56, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Feather name="plus" size={18} color={C.ink} />
+            <T s="label">나만의 챕터 만들기</T>
+          </Pressable>
+        ) : null}
       </ScrollView>
       <Paywall visible={pw} onClose={() => setPw(false)} />
     </Screen>
