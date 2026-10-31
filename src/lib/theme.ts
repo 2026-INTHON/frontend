@@ -6,6 +6,7 @@ export const C = {
   bg: '#F3F2EE',
   lime: '#D4FF4F', // 행동 버튼에만
   white: '#FFFFFF',
+  profileSurface: 'rgba(255,255,255,0.94)',
   red: '#FF4D4F', // 사건·실패에만
   dim: 'rgba(17,17,17,0.55)',
 };
