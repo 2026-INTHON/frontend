@@ -1,5 +1,5 @@
-import React from 'react';
-import { Stack, router } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack, router, useSegments } from 'expo-router';
 import { setSignedOutHandler } from '../lib/api';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, NotoSansKR_400Regular, NotoSansKR_500Medium, NotoSansKR_700Bold, NotoSansKR_900Black } from '@expo-google-fonts/noto-sans-kr';
@@ -26,6 +26,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <PhoneFrame>
         <Hydrated>
+        <LanguageGate />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, animation: 'slide_from_right' }}>
           <Stack.Screen name="scene/[id]" options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="result" options={{ animation: 'fade', gestureEnabled: false }} />
@@ -35,6 +36,16 @@ export default function RootLayout() {
       </StoreProvider>
     </SafeAreaProvider>
   );
+}
+
+function LanguageGate() {
+  const { languageSelected } = useStore();
+  const segments = useSegments();
+  const first = segments[0];
+  useEffect(() => {
+    if (!languageSelected && first && first !== 'index' && first !== 'auth' && first !== 'onboarding') router.replace('/onboarding/lang');
+  }, [languageSelected, first]);
+  return null;
 }
 
 // 저장된 진행 상황을 다 불러온 뒤에 화면을 그려요 (처음 화면이 깜빡이지 않게)

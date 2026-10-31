@@ -27,7 +27,7 @@ export default function Home() {
   const setProfileOpen = useCallback((open: boolean) => setProfile({ key: profileKey, open }), [profileKey]);
   const c = charById(charId);
   const p = PERSONAS[charId].find((x) => x.id === personaId) ?? PERSONAS[charId][2];
-  const today = useToday(st.demo, charId, personaId, st.pack, !lp);
+  const today = useToday(st.demo, charId, personaId, st.pack, st.lang, !lp);
 
   // 이어갈 장면과 버튼 이름을 실제 상태에 맞춰요
   const next =
@@ -86,19 +86,19 @@ export default function Home() {
 }
 
 // 처음 시작하는 사람의 '오늘의 장면': 서버 챕터에서 내 캐릭터의 열린 장면 (데모 모드는 앱 안 대본)
-function useToday(demo: boolean, char: CharId, persona: PersonaId, pack: 'ko' | 'en', need: boolean): { sceneId?: string; title?: string; loading: boolean; err?: string } {
-  const key = `${char}-${persona}-${pack}`;
+function useToday(demo: boolean, char: CharId, persona: PersonaId, pack: 'ko' | 'en', language: string, need: boolean): { sceneId?: string; title?: string; loading: boolean; err?: string } {
+  const key = `${char}-${persona}-${pack}-${language}`;
   const [s, setS] = useState<{ key: string; sceneId?: string; title?: string; err?: string } | null>(null);
   useEffect(() => {
     if (!need || demo) return;
     let alive = true;
-    resolveTodayScene(char, persona, pack)
+    resolveTodayScene(char, persona, pack, language)
       .then((r) => alive && setS(r ? { key, ...r } : { key, err: '지금 열린 장면이 없어요.' }))
       .catch(() => alive && setS({ key, err: '장면 목록을 불러오지 못했어요. 눌러서 바로 시작할 수 있어요.' }));
     return () => {
       alive = false;
     };
-  }, [demo, char, persona, pack, need, key]);
+  }, [demo, char, persona, pack, language, need, key]);
   if (demo) {
     const sc = sceneForChar(char);
     return { sceneId: sc.id, title: sc.title, loading: false };

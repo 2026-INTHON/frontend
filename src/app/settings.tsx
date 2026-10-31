@@ -25,8 +25,9 @@ export default function Settings() {
       <ScrollView contentContainerStyle={{ padding: 24, gap: 10 }}>
         <T s="small">학습</T>
         <Card style={{ gap: 14 }}>
-          <Row k="학습 팩" right={<Chip label={st.pack === 'ko' ? '한국어팩' : '영어팩'} dark onPress={() => st.set({ pack: st.pack === 'ko' ? 'en' : 'ko' })} />} />
-          <Row k="모국어" right={<Chip label={LANGS.find((l) => l.id === st.lang)?.name ?? 'English'} dark onPress={() => router.push('/onboarding/lang')} />} />
+          <Row k="학습 팩" right={<T s="label">한국어팩</T>} />
+          <T s="small">영어팩은 준비 중이에요.</T>
+          <Row k="설명·자막 언어" right={<Chip label={LANGS.find((l) => l.id === st.lang)?.name ?? 'English'} dark onPress={() => router.push({ pathname: '/onboarding/lang', params: { returnTo: 'settings' } })} />} />
           <Row k="음성 속도" right={<View style={{ flexDirection: 'row', gap: 4 }}>{['0.8x', '1.0x', '1.2x'].map((x) => <Chip key={x} label={x} on={speed === x} dark onPress={() => setSpeed(x)} />)}</View>} />
           <Row k="자막 보기" right={<Toggle value={sub} onValueChange={setSub} />} />
           <Row k="속마음 힌트 자동 표시" right={<Toggle value={auto} onValueChange={setAuto} />} />
