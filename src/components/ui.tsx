@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle, Modal, Image } from 'react-native';
+import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle, Modal, Image, Animated, Easing } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -116,18 +116,30 @@ export function Card({ children, style, onPress }: { children: React.ReactNode; 
   );
 }
 
-export function Sheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
+// 아래에서 올라오는 시트. 뒤 배경은 슬라이드 없이 살짝만 흐려지고(dim=false 면 그대로), 시트만 올라와요.
+export function Sheet({ visible, onClose, children, dim = true }: { visible: boolean; onClose: () => void; children: React.ReactNode; dim?: boolean }) {
   const ins = useSafeAreaInsets();
+  const a = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    if (visible) {
+      a.setValue(0);
+      Animated.timing(a, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    }
+  }, [visible]);
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: C.dim }} onPress={onClose} />
-      <View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20, width: '100%', maxWidth: 430, alignSelf: 'center' }}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      {/* 배경은 화면 전체를 덮고, 시트는 그 위에 얹어요 (옆이 덜 어두워지는 문제 방지) */}
+      <AnimatedPressable style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: dim ? 'rgba(17,17,17,0.28)' : 'transparent', opacity: a }} onPress={onClose} />
+      <View pointerEvents="box-none" style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <Animated.View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20, width: '100%', maxWidth: 430, alignSelf: 'center', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: -4 }, elevation: 12, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [480, 0] }) }] }}>
         <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: C.line, marginTop: -12, marginBottom: 16 }} />
         {children}
+      </Animated.View>
       </View>
     </Modal>
   );
 }
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function Hearts({ n, max = 3 }: { n: number; max?: number }) {
   return (

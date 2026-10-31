@@ -501,7 +501,7 @@ export default function SceneScreen() {
       </Sheet>
 
       {/* 속마음 힌트: 1단계 단서 → 2단계 속마음 */}
-      <Sheet visible={!!hint} onClose={() => setHint(null)}>
+      <Sheet visible={!!hint} dim={false} onClose={() => setHint(null)}>
         <View style={{ gap: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Feather name="search" size={18} />
@@ -521,8 +521,8 @@ export default function SceneScreen() {
           {hintStep === 2 ? (
             <>
               <T s="label">2단계 · 진짜 속마음</T>
-              <View style={{ backgroundColor: C.ink, borderRadius: 18, padding: 16 }}>
-                <T s="body" style={{ fontFamily: F.m, color: C.white }}>{hint?.thought}</T>
+              <View style={{ backgroundColor: C.bg, borderRadius: 18, padding: 16, borderLeftWidth: 4, borderLeftColor: C.lime }}>
+                <T s="body" style={{ fontFamily: F.m }}>{hint?.thought}</T>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Feather name="zap" size={16} style={{ marginTop: 3 }} />

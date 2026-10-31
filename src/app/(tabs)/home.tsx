@@ -12,7 +12,7 @@ import { useStore } from '../../lib/store';
 export default function Home() {
   const st = useStore();
   const ins = useSafeAreaInsets();
-  const [streak, setStreak] = useState(true);
+  const streak = !st.streakClaimed; // 받으면 다시 안 떠요
   const c = charById('seoyun');
   const p = PERSONAS.seoyun[0];
   return (
@@ -71,7 +71,7 @@ export default function Home() {
             <View style={{ backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }}>
               <Coin n="+50 코인" size={13} />
             </View>
-            <Btn label="받기" style={{ alignSelf: 'stretch', marginTop: 6 }} onPress={() => { st.addCoins(50); setStreak(false); }} />
+            <Btn label="받기" style={{ alignSelf: 'stretch', marginTop: 6 }} onPress={() => { st.addCoins(50); st.set({ streakClaimed: true }); }} />
           </View>
         </View>
       </Modal>
