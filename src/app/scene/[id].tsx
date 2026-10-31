@@ -15,7 +15,7 @@ import { useRec } from '../../lib/useRec';
 import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
 import { useStore } from '../../lib/store';
 
-type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized' | 'reaction' | 'mistake' | 'feedback';
+type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized' | 'reaction';
 type Log = { who: 'char' | 'me'; text: string; mark?: Mark };
 
 const TONE: Record<string, string> = { office: 'rgba(220,224,229,0.35)', cafe: 'rgba(238,230,219,0.35)', street: 'rgba(217,222,232,0.35)' };
@@ -48,6 +48,7 @@ export default function SceneScreen() {
   const [hintStep, setHintStep] = useState<1 | 2>(1);
   const [hintErr, setHintErr] = useState<string | null>(null);
   const [views, setViews] = useState(false);
+  const [detail, setDetail] = useState(false); // 피드백 자세히 (대화를 막지 않고, 원할 때만 열어요)
   const [pause, setPause] = useState(false);
   const [history, setHistory] = useState(false);
   const [fail, setFail] = useState(false);
@@ -282,6 +283,7 @@ export default function SceneScreen() {
     setLine(o.replyLine);
     setLineMark(o.mark);
     play(o.replyLine);
+    setDetail(false);
     setPhase('reaction');
     if (o.ok) haptic.good();
     else {
@@ -293,17 +295,26 @@ export default function SceneScreen() {
     }
   }
 
-  // 반응 말풍선을 1.4초 보여 준 뒤 이유 시트 (배지를 누르면 바로)
+  // 반응 말풍선을 잠깐 보여 준 뒤 대화를 막지 않고 이어가요.
+  // 통하면 다음 대사로, 아니면 같은 대사로 돌아가서 바로 다시 말할 수 있어요. 피드백은 아래 한 줄 + '자세히'.
   useEffect(() => {
     if (phase !== 'reaction') return;
-    const t = setTimeout(openReason, 1400);
+    const t = setTimeout(settle, 1600);
     return () => clearTimeout(t);
   }, [phase]);
-  function openReason() {
+  const movesOn = (o: Out) => o.ok || (o.mark === '△' && !o.native && o.advance);
+  function settle() {
     if (!out) return;
     // 서버 모드: 체력이 다 떨어지면 세션이 끝나고 배드엔딩이 와요 → 결과 화면에서 엔딩 보여 주기
     if (out.failed) return E?.mode === 'live' ? finish() : setFail(true);
-    setPhase(out.ok ? 'feedback' : 'mistake');
+    if (movesOn(out)) {
+      if (out.done) return; // 마지막 대사: 아래 '결과 보기' 버튼
+      return next();
+    }
+    retry();
+  }
+  function openReason() {
+    setDetail(true);
   }
 
   function retry() {
@@ -463,6 +474,22 @@ export default function SceneScreen() {
             </View>
           ) : null}
 
+          {/* 방금 답의 피드백 한 줄: 대화를 막지 않아요. 누르면 자세히 */}
+          {out && !judging && !sendErr && phase !== 'brief' ? (
+            <Pressable onPress={() => setDetail(true)} accessibilityRole="button" accessibilityLabel={`피드백 자세히: ${out.label}`} style={{ backgroundColor: C.white, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <ReactionBadge mark={out.mark} size={24} />
+              <View style={{ flex: 1 }}>
+                <T s="label" numberOfLines={1}>{out.native ? '한국어로 다시 말해 보세요' : out.label}{out.lifeDelta < 0 ? ' · 체력 -1' : ''}</T>
+                {(out.ok ? out.tip : out.native ? out.better : out.why) ? <T s="small" numberOfLines={1}>{out.ok ? out.tip : out.native ? `"${out.better}"` : out.why}</T> : null}
+              </View>
+              {out.done && movesOn(out) ? (
+                <Btn label="결과 보기" small icon="arrow-right" onPress={finish} />
+              ) : (
+                <T s="small" style={{ color: C.ink, fontFamily: F.b }}>자세히</T>
+              )}
+            </Pressable>
+          ) : null}
+
           {/* 듣는 중 / 인식 중 */}
           {listening ? (
             <View style={{ backgroundColor: C.lime, borderRadius: 20, borderWidth: 2, borderColor: C.ink, padding: 14, alignItems: 'center', gap: 6 }}>
@@ -577,7 +604,7 @@ export default function SceneScreen() {
       ) : null}
 
       {/* 말실수: △ / X / 모국어 */}
-      <Sheet visible={phase === 'mistake'} onClose={retry}>
+      <Sheet visible={detail && !!out && !out.ok} onClose={() => setDetail(false)}>
         {out ? (
           <View style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -605,11 +632,11 @@ export default function SceneScreen() {
               </View>
             ) : null}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-              {out.mark === '△' && !out.native && (out.advance || E?.canSkip) ? <Btn label="다음 대화" kind="line" style={{ flex: 1 }} onPress={cont} /> : null}
-              <Btn label={out.native ? '한국어로 다시 말하기' : '다시 말하기'} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={retry} />
+              {out.mark === '△' && !out.native && E?.canSkip && !out.advance ? <Btn label="다음 대화" kind="line" style={{ flex: 1 }} onPress={() => { setDetail(false); cont(); }} /> : null}
+              <Btn label={out.native ? '한국어로 다시 말하기' : '다시 말하기'} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={() => { setDetail(false); if (phase === 'reaction') retry(); }} />
             </View>
             {out.mark === 'X' && out.tries >= 3 && E?.canSkip ? (
-              <Pressable onPress={cont} style={{ alignSelf: 'center', padding: 6 }}>
+              <Pressable onPress={() => { setDetail(false); cont(); }} style={{ alignSelf: 'center', padding: 6 }}>
                 <T s="label" style={{ textDecorationLine: 'underline', color: C.sub }}>예시 보고 넘어가기</T>
               </Pressable>
             ) : null}
@@ -618,7 +645,7 @@ export default function SceneScreen() {
       </Sheet>
 
       {/* 턴 피드백 (O) */}
-      <Sheet visible={phase === 'feedback' && !views} onClose={next}>
+      <Sheet visible={detail && !!out?.ok && !views} onClose={() => setDetail(false)}>
         {out ? (
           <View style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -664,8 +691,7 @@ export default function SceneScreen() {
               </Pressable>
             ) : null}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-              <Btn label="다시 연습하기" kind="line" style={{ flex: 1 }} onPress={retry} />
-              <Btn label={out.done ? '결과 보기' : '다음 대화'} icon="arrow-right" style={{ flex: 1.3 }} onPress={next} />
+              {out.done ? <Btn label="결과 보기" icon="arrow-right" style={{ flex: 1 }} onPress={() => { setDetail(false); finish(); }} /> : <Btn label="닫고 이어서 말하기" icon="mic" style={{ flex: 1 }} onPress={() => setDetail(false)} />}
             </View>
           </View>
         ) : null}
