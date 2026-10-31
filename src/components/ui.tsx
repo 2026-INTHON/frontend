@@ -32,6 +32,8 @@ export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, smal
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         { height: small ? 44 : 56, borderRadius: R.btn, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 18, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
         kind === 'line' && { borderWidth: 1, borderColor: C.line },
@@ -46,7 +48,7 @@ export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, smal
 
 export function Chip({ label, on, onPress, style, dark }: { label: string; on?: boolean; onPress?: () => void; style?: ViewStyle; dark?: boolean }) {
   return (
-    <Pressable onPress={onPress} style={[{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill, backgroundColor: on ? C.ink : dark ? C.bg : C.white, borderWidth: on ? 0 : 1, borderColor: C.line }, style]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!on }} style={[{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill, backgroundColor: on ? C.ink : dark ? C.bg : C.white, borderWidth: on ? 0 : 1, borderColor: C.line }, style]}>
       <Text style={{ fontFamily: on ? F.b : F.m, fontSize: 13, color: on ? C.white : C.ink }}>{label}</Text>
     </Pressable>
   );
@@ -67,13 +69,16 @@ export function Screen({ children, bg = C.bg, style, pad = true }: { children: R
   return <View style={[{ flex: 1, backgroundColor: bg, paddingTop: ins.top + 8, paddingBottom: pad ? ins.bottom + 12 : 0 }, style]}>{children}</View>;
 }
 
-export function IconBtn({ name, onPress, bg = C.white, color = C.ink, size = 40 }: { name: keyof typeof Feather.glyphMap; onPress?: () => void; bg?: string; color?: string; size?: number }) {
+export function IconBtn({ name, onPress, bg = C.white, color = C.ink, size = 40, label }: { name: keyof typeof Feather.glyphMap; onPress?: () => void; bg?: string; color?: string; size?: number; label?: string }) {
   return (
-    <Pressable onPress={onPress} hitSlop={8} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={label ?? ICON_LABEL[name] ?? name} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
       <Feather name={name} size={size * 0.45} color={color} />
     </Pressable>
   );
 }
+
+// 아이콘만 있는 버튼의 읽기용 이름 (스크린리더)
+const ICON_LABEL: Partial<Record<string, string>> = { 'chevron-left': '뒤로', settings: '설정', clock: '대화 내역', 'log-out': '나가기', pause: '일시정지', mic: '말하기', send: '보내기', x: '닫기' };
 
 export function Coin({ n, size = 14 }: { n?: number | string; size?: number }) {
   return (
@@ -147,7 +152,7 @@ export const FRAME = { flex: 1, width: '100%' as const, maxWidth: 430, alignSelf
 
 export function Hearts({ n, max = 3 }: { n: number; max?: number }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
+    <View accessible accessibilityLabel={`체력 ${n}/${max}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
       <T s="small" style={{ color: C.ink }}>체력</T>
       {Array.from({ length: max }).map((_, i) => (
         <Ionicons key={i} name="heart" size={15} color={i < n ? C.ink : C.line} />
