@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CharId, PersonaId } from './data';
 import type { Ending } from './engine';
@@ -137,6 +137,8 @@ const Store = createContext<Ctx | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [s, setS] = useState<State>(initial);
   const [hydrated, setHydrated] = useState(false);
+  // Record sync depends on this callback. A new function after every response restarts the fetch effect.
+  const set = useCallback((p: Partial<State>) => setS(o => ({ ...o, ...p, pack: 'ko' })), []);
   const ref = useRef(s);
   useEffect(() => {
     ref.current = s;
@@ -166,7 +168,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ...s,
       hydrated,
       streak: !s.demo && s.serverStreak != null ? s.serverStreak : streakOf(s.studyDays),
-      set: (p) => setS((o) => ({ ...o, ...p, pack: 'ko' })),
+      set,
       addCoins: (n) => setS((o) => ({ ...o, coins: Math.max(0, o.coins + n) })),
       addMistake: (m) => setS((o) => ({ ...o, mistakes: [m, ...o.mistakes.filter((x) => x.id !== m.id)] })),
       completeScene: ({ score, ...r }) => {
@@ -187,7 +189,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       setDemo: (on) => setS((o) => (on ? { ...o, demo: true, ...(o.history.length || o.mistakes.length ? {} : demoSeed()) } : { ...o, demo: false })),
     }),
-    [s, hydrated],
+    [s, hydrated, set],
   );
   return <Store.Provider value={value}>{children}</Store.Provider>;
 }
