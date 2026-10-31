@@ -14,12 +14,13 @@ import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
 import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
 import { TurnRec, useStore } from '../../lib/store';
+import { shareConversation } from '../../lib/share-log';
 import { useLang, useT } from '../../lib/i18n';
 import { reactionCopy } from '../../lib/learning-copy';
 import { CharacterActor } from '../../components/character-actor';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized';
-type Log = { who: 'char' | 'me'; text: string; mark?: Mark };
+type Log = { who: 'char' | 'me'; text: string; mark?: Mark; line?: Line; audio?: string | null }; // line·audio: 내보내기용 음성
 // 대사를 넘긴 뒤 남겨 두는 직전 반응 (작은 말풍선 + 판정 배지)
 type Reaction = { text: string; sub?: string | null; mark: Mark };
 
@@ -63,6 +64,8 @@ export default function SceneScreen() {
   const [judging, setJudging] = useState(false);
   const [hintNudge, setHintNudge] = useState(false);
   const [log, setLog] = useState<Log[]>([]);
+  const [sharing, setSharing] = useState(false);
+  const myAudio = useRef<string | null>(null); // 방금 녹음한 내 목소리 (파일 녹음일 때만)
   const holdAt = useRef(0);
   const sending = useRef(false);
   const finishing = useRef(false);
@@ -165,7 +168,7 @@ export default function SceneScreen() {
   function showLine(l: Line) {
     setLine(l);
     setLineMark(null);
-    setLog((g) => [...g, { who: 'char', text: l.line }]);
+    setLog((g) => [...g, { who: 'char', text: l.line, line: l }]);
     play([l]);
   }
 
@@ -265,6 +268,7 @@ export default function SceneScreen() {
     }
     setRtHeard(false);
     const uri = await rec.stop();
+    myAudio.current = uri || null;
     setPhase('recognizing');
     const e = eng.current!;
     let r: { text: string; transcriptId?: string };
@@ -310,7 +314,9 @@ export default function SceneScreen() {
     setOut(o);
     setDetail(false);
     setHearts(e.lives);
-    setLog((g) => [...g, { who: 'me', text: ans }, { who: 'char', text: o.reply, mark: o.mark }]);
+    const mine = voice && !rtHeard ? myAudio.current : null;
+    myAudio.current = null;
+    setLog((g) => [...g, { who: 'me', text: ans, audio: mine }, { who: 'char', text: o.reply, mark: o.mark, line: o.replyLine }]);
     let mistakeId: string | undefined;
     if (o.ok) haptic.good();
     else {
@@ -349,7 +355,7 @@ export default function SceneScreen() {
       setLine(nl);
       setLineMark(null);
       setHintNudge(false);
-      setLog((g) => [...g, { who: 'char', text: nl.line }]);
+      setLog((g) => [...g, { who: 'char', text: nl.line, line: nl }]);
       play([o.replyLine, nl]);
       saveProgress();
     } else {
@@ -383,6 +389,34 @@ export default function SceneScreen() {
       setNotice(t('다시 말하기를 준비하지 못했어요. 잠시 후 다시 눌러 주세요.'));
     } finally {
       sending.current = false;
+    }
+  }
+
+  // 대화 + 음성 전체 내역 내보내기 (캐릭터 음성은 서버에서 다시 받아 파일에 넣어요)
+  async function exportLog() {
+    const e = eng.current;
+    if (!e || sharing || !log.length) return;
+    setSharing(true);
+    try {
+      const entries = [];
+      for (const m of log) {
+        let audio: string | null = m.audio ?? null;
+        if (m.who === 'char' && m.line) audio = m.line.audio ?? (await e.voiceUrl(m.line).catch(() => null));
+        entries.push({ who: m.who, name: t(ch.name), text: m.text, sub: lang !== 'ko' ? m.line?.sub ?? null : null, mark: m.mark ?? null, audio });
+      }
+      const r = await shareConversation({
+        title: [scene.no, scene.title].filter(Boolean).join(' · ') || t('대화 내역'),
+        subtitle: `${t(ch.name)} · ${t(persona.name)}`,
+        date: new Date().toLocaleString(),
+        entries,
+        labels: { me: t('나'), audioMissing: t('음성을 불러오지 못했어요'), footer: 'Malo' },
+      });
+      if (r === 'downloaded') setNotice(t('대화 내역 파일을 저장했어요.'));
+      else if (r === 'text') setNotice(t('음성 없이 글만 공유했어요.'));
+    } catch {
+      setNotice(t('내보내지 못했어요. 다시 눌러 주세요.'));
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -810,7 +844,10 @@ export default function SceneScreen() {
 
       {/* 대화 내역 */}
       <Sheet visible={history} onClose={() => setHistory(false)}>
-        <T s="h2">{t('대화 내역')}</T>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <T s="h2" style={{ flex: 1 }}>{t('대화 내역')}</T>
+          <Btn label={sharing ? t('준비 중…') : t('공유')} small kind="line" icon="share-2" disabled={sharing || !log.length} onPress={exportLog} />
+        </View>
         <T s="small" style={{ marginBottom: 12 }}>{[scene.no, scene.title, t(ch.name)].filter(Boolean).join(' · ')}</T>
         <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 10 }}>
           {log.map((m, i) => (

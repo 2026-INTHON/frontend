@@ -579,4 +579,11 @@ export const DICT: Record<string, [string, string, string]> = {
   "편안함": ["relaxed", "リラックス", "放松"],
   "평평하고 짧음": ["flat and short", "平坦で短い", "平淡简短"],
   "틀린 문장 복습하기": ["Review the wrong line", "間違えた文を復習", "复习说错的句子"],
+  "나": ["Me", "自分", "我"],
+  "음성을 불러오지 못했어요": ["Couldn't load the voice", "音声を読み込めませんでした", "无法加载语音"],
+  "대화 내역 파일을 저장했어요.": ["Saved the conversation file.", "会話の記録ファイルを保存しました。", "已保存对话记录文件。"],
+  "음성 없이 글만 공유했어요.": ["Shared the text only, without voice.", "音声なしでテキストだけ共有しました。", "仅分享了文字，未包含语音。"],
+  "내보내지 못했어요. 다시 눌러 주세요.": ["Couldn't export. Please tap again.", "書き出せませんでした。もう一度押してください。", "导出失败，请再点一次。"],
+  "준비 중…": ["Preparing…", "準備中…", "准备中…"],
+  "공유": ["Share", "共有", "分享"],
 };
