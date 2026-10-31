@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { getTokens, setTokens, MaloUser, Tokens } from './tokens';
 
 // 백엔드 API (Next.js) 연결. 문서: <API_BASE>/api/v1/docs
 // 주소는 .env 의 EXPO_PUBLIC_API_URL 로 바꿀 수 있어요.
@@ -41,32 +42,88 @@ export type SessionResult = {
 export type SubmitTurnResult = { turn: ApiTurn; session: PlaySession; result: SessionResult | null; oopsMoment: { triggered: boolean; lifeDelta: number }; mistakeId: string | null };
 export type ApiScene = { id: string; title: string; situation: string; goal: string; pack: 'ko' | 'en'; characterId: string; personalityId: string; nodeCount: number };
 
-let token: string | null = null;
+// 공통 응답 {data, meta} 면 data 만 꺼내요
+const unwrap = (j: any) => (j && typeof j === 'object' && 'data' in j && ('meta' in j || Object.keys(j).length <= 2) ? j.data : j);
 
-async function call<T>(path: string, init: RequestInit = {}, auth = true, timeoutMs = 15000): Promise<T> {
+export class ApiError extends Error {
+  constructor(public status: number, public code: string | undefined, msg: string) {
+    super(msg);
+  }
+}
+
+async function raw<T>(path: string, init: RequestInit = {}, bearer: string | null, timeoutMs = 15000): Promise<T> {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeoutMs);
   try {
-    if (auth && !token) await guest();
     const headers: Record<string, string> = { Accept: 'application/json', ...(init.headers as any) };
     if (init.body && !(init.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-    if (auth && token) headers.Authorization = `Bearer ${token}`;
+    if (bearer) headers.Authorization = `Bearer ${bearer}`;
     const res = await fetch(API_BASE + path, { ...init, headers, signal: ctl.signal });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      throw new Error(body?.error?.message || `HTTP ${res.status}`);
+      throw new ApiError(res.status, body?.error?.code, body?.error?.message || `HTTP ${res.status}`);
     }
-    return (await res.json()) as T;
+    if (res.status === 204) return undefined as T;
+    return unwrap(await res.json()) as T;
   } finally {
     clearTimeout(t);
   }
 }
 
-export async function guest(name = '게스트') {
-  const s = await call<{ accessToken: string }>('/auth/guest', { method: 'POST', body: JSON.stringify({ displayName: name }) }, false);
-  token = s.accessToken;
-  return s;
+// 로그인 토큰이 없으면 게스트로 시작. 401 이면 refresh 한 번 → 실패하면 게스트로 다시.
+async function call<T>(path: string, init: RequestInit = {}, auth = true, timeoutMs = 15000): Promise<T> {
+  if (!auth) return raw<T>(path, init, null, timeoutMs);
+  let tk = await getTokens();
+  if (!tk) tk = await guest();
+  try {
+    return await raw<T>(path, init, tk.accessToken, timeoutMs);
+  } catch (e) {
+    if (!(e instanceof ApiError) || e.status !== 401) throw e;
+    let next = await refresh().catch(() => null);
+    if (!next) {
+      await setTokens(null);
+      if (!tk.user?.isGuest) {
+        onSignedOut?.(); // 회원이면 로그인 화면으로
+        throw e;
+      }
+      next = await guest(); // 게스트면 새 게스트로 계속
+    }
+    return raw<T>(path, init, next.accessToken, timeoutMs);
+  }
 }
+
+let onSignedOut: (() => void) | null = null;
+export const setSignedOutHandler = (f: (() => void) | null) => (onSignedOut = f);
+
+type AuthRes = { accessToken: string; refreshToken?: string; expiresIn?: number; user?: MaloUser; migrated?: unknown };
+
+export async function guest(name = '게스트'): Promise<Tokens> {
+  const s = await raw<AuthRes>('/auth/guest', { method: 'POST', body: JSON.stringify({ displayName: name }) }, null);
+  const t = { accessToken: s.accessToken, refreshToken: s.refreshToken, user: s.user ? { ...s.user, isGuest: true } : { id: 'guest', isGuest: true } };
+  await setTokens(t);
+  return t;
+}
+
+// refresh token 은 회전돼요 → 응답 토큰으로 함께 교체
+export async function refresh(): Promise<Tokens | null> {
+  const tk = await getTokens();
+  if (!tk?.refreshToken) return null;
+  const s = await raw<AuthRes>('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: tk.refreshToken }) }, null);
+  const t = { accessToken: s.accessToken, refreshToken: s.refreshToken ?? tk.refreshToken, user: s.user ?? tk.user };
+  await setTokens(t);
+  return t;
+}
+
+export const authApi = {
+  config: () => raw<{ google?: { enabled: boolean }; supabaseUrl?: string; publishableKey?: string }>('/auth/config', {}, null, 6000),
+  // 기존 게스트 토큰을 같이 보내면 게스트 기록이 회원으로 옮겨져요
+  googleExchange: (supabaseAccessToken: string, guestToken: string | null) =>
+    raw<AuthRes>('/auth/google/exchange', { method: 'POST', body: JSON.stringify({ supabaseAccessToken }) }, guestToken, 20000),
+  logout: async () => {
+    const tk = await getTokens();
+    if (tk) await raw('/auth/logout', { method: 'POST', body: '{}' }, tk.accessToken).catch(() => null);
+  },
+};
 
 export const api = {
   health: () => call<{ status?: string }>('/health', {}, false, 5000),

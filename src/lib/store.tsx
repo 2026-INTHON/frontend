@@ -15,6 +15,7 @@ type State = {
   mistakes: Mistake[];
   onboarded: boolean;
   lastScene: string | null;
+  streakClaimed: boolean; // 연속 출석 보상은 하루 한 번만
 };
 
 const initial: State = {
@@ -32,6 +33,7 @@ const initial: State = {
   ],
   onboarded: false,
   lastScene: null,
+  streakClaimed: false,
 };
 
 type Ctx = State & { set: (p: Partial<State>) => void; addCoins: (n: number) => void; addMistake: (m: Mistake) => void };

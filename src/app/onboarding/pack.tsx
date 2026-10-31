@@ -13,7 +13,7 @@ const PACKS = [
   { id: 'en' as const, name: '영어팩', desc: '카페 · 여행 · 회사에서 영어로', icon: 'briefcase' as const },
 ];
 
-// 02 팩 고르기import { Lineup } from '../../components/lineup';
+// 02 팩 고르기
 
 export default function Pack() {
   const { pack, set } = useStore();

@@ -5,10 +5,13 @@ import { Card, Chip, Coin, Screen, T, TopBar } from '../components/ui';
 import { C } from '../lib/theme';
 import { LANGS } from '../lib/data';
 import { useStore } from '../lib/store';
+import { useAccount } from '../lib/useAccount';
+import { GoogleButton } from '../components/google-button';
 
 // 21 설정
 export default function Settings() {
   const st = useStore();
+  const acc = useAccount();
   const [speed, setSpeed] = useState('1.0x');
   const [sub, setSub] = useState(true);
   const [auto, setAuto] = useState(false);
@@ -32,9 +35,18 @@ export default function Settings() {
         </Card>
         <T s="small" style={{ marginTop: 8 }}>계정</T>
         <Card style={{ gap: 14 }}>
+          {acc.user ? (
+            <Row k="Google 계정" right={<T s="label">{acc.user.email ?? acc.user.displayName ?? '로그인됨'}</T>} />
+          ) : (
+            <View style={{ gap: 8 }}>
+              <T s="sub">지금은 게스트예요. 로그인하면 학습 기록이 계정에 옮겨져요.</T>
+              <GoogleButton onPress={acc.login} busy={acc.busy} disabled={acc.enabled === false} />
+              {acc.msg ? <T s="small">{acc.msg}</T> : null}
+            </View>
+          )}
           <Row k="요금제" right={<T s="label">{st.subscribed ? 'PRO' : '무료 · PRO 보기'}</T>} />
           <Row k="코인" right={<Coin n={st.coins} />} />
-          <Pressable onPress={() => { st.set({ onboarded: false }); router.replace('/'); }}>
+          <Pressable onPress={async () => { await acc.logout(); st.set({ onboarded: false }); router.replace('/'); }}>
             <T s="label" style={{ color: C.red }}>로그아웃</T>
           </Pressable>
         </Card>
