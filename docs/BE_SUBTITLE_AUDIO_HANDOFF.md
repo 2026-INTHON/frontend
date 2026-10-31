@@ -11,7 +11,7 @@ FE는 다음 순서로 연결해 주세요.
 1. 응답 `{data,meta}`에서 data를 꺼낸다. miod PR7에 이미 구현된 unwrap을 유지한다.
 2. `GET /api/v1/scenes?pack=ko&characterId=girlfriend` 또는 `characterId=professor`에서 `source=curriculum`, `nodeCount=8`인 장면을 선택한다. 첫 회차는 각각 **`gf-1-1`**, **`prof-1-1`**이다. 모든 공개 예시를 첫 항목으로 선택하면 1~3회짜리 짧은 예시가 선택될 수 있다.
 3. 시작 요청에 `aiMode:"live"`, 선택 언어를 명시한다. 서버는 새 교육과정·개인 생성 장면을 live로 고정한다.
-4. UI의 마지막 발화 판단은 로컬 `turns.length`가 아니라 `session.nodeCount/nodeIndex/status`와 `result`를 사용한다. 사용자 답변이 적절하게 통과하면 다음 노드로 진행하며, △·모국어 도움·정정은 같은 노드에서 재도전한다. 8개 노드를 모두 통과하거나 체력이 소진돼야 종료된다.
+4. UI의 마지막 발화 판단은 로컬 `turns.length`가 아니라 `session.nodeCount/nodeIndex/status`와 `result`를 사용한다. 사용자 답변이 적절하게 통과하면 다음 노드로 진행하며, △는 서버 progression에 따라 진행 또는 재도전하고, 모국어 도움·정정은 같은 노드에서 재도전한다. 8개 노드를 모두 통과하거나 체력이 소진돼야 종료된다.
 5. API 실패 시 로컬 대본·가짜 STT·가짜 결과로 전환하지 않는다. 입력·세션·clientTurnId를 유지하고 오류와 재시도를 표시한다.
 
 현재 8회 교육과정은 여자친구·교수용이다. 친구·부장 및 영어팩의 기존 짧은 예시는 그대로 별도 제공한다. 이 예시까지 8회 콘텐츠로 만들어졌다고 가정하지 않는다.
@@ -95,3 +95,5 @@ BE 문서: **https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.com/api
 `feat/* → develop → main` 순서로 PR을 병합한다. main의 검사 통과 후 배포 릴리스가 생성되고 VM이 받아 적용한다. 병합 직후 즉시 바뀌는 것은 아니다. 외부 사용자는 HTTPS 주소로 접속하며, VM의 8080은 내부 리스너다.
 
 배경 이미지는 BE에서 흐림 처리하므로 FE에서 다시 블러를 적용하지 않는다. 캐릭터 이미지·텍스트는 선명하게 유지한다. GLB 구현은 제외하며 [이미지 전환 요청사항](CHARACTER_IMAGES.md)을 따른다.
+
+상황 안내와 O·△·X·? 판정, 완료 상세 보고서는 [최신 통합 계약](FE_INTEGRATION.md#상황-안내판정상세-보고서-계약)을 따른다. 다음 노드의 `npc.audioUrl`이 null이면 `/sessions/{id}/speech {}`로 해당 현재 대사의 음성을 발급한다. 반응 대사는 반드시 turn.audioUrl 또는 speech {turnId}를 사용한다.
