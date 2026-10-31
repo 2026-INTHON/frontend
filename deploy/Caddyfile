@@ -5,7 +5,12 @@
   handle /healthz {
     respond "ok" 200
   }
+  @static path /_expo/* /assets/*
+  handle @static {
+    file_server
+  }
   handle {
+    header Cache-Control "no-store"
     try_files {path} /index.html
     file_server
   }

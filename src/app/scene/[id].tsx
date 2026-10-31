@@ -9,7 +9,7 @@ import { Dots, LineCard, ReactionBadge, Stat, Wave } from '../../components/scen
 import { C, F } from '../../lib/theme';
 import { IMG, Line, PERSONAS, PLACE_OF, charById } from '../../lib/data';
 import { createEngine, Engine, Hint, Mark, Out, SceneError } from '../../lib/engine';
-import { speak, stopSpeak } from '../../lib/voice';
+import { stopSpeak } from '../../lib/voice';
 import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
 import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
@@ -62,6 +62,7 @@ export default function SceneScreen() {
   const [rtHeard, setRtHeard] = useState(false);
   const [rtStat, setRtStat] = useState({ ms: 0, level: -60 });
   const player = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
+  const voiceRequest = useRef(0);
 
   const E = eng.current;
   const charId = E?.char ?? st.char;
@@ -78,6 +79,12 @@ export default function SceneScreen() {
   }
   function start() {
     let alive = true;
+    setReady(false);
+    setLoadErr(null);
+    setPhase('brief');
+    setOut(null);
+    setLog([]);
+    eng.current = null;
     createEngine(sceneId, { demo: st.demo, pack: st.pack, lang: st.lang, char: st.char, persona: st.persona, retryOf: retryOf ? String(retryOf) : undefined })
       .then((e) => {
         if (!alive) return;
@@ -93,14 +100,18 @@ export default function SceneScreen() {
     };
   }
   useEffect(() => {
+    if (!st.hydrated) return;
     const off = start();
     return () => {
       off();
+      voiceRequest.current++;
       stopSpeak();
       player.current?.remove();
+      player.current = null;
       rt.current?.close();
+      rt.current = null;
     };
-  }, []);
+  }, [sceneId, st.hydrated, st.demo, st.pack, st.lang, st.char, st.persona, retryOf]);
 
   const canRealtime = () => eng.current?.mode === 'live' && realtimeSupported();
   // 말할 차례가 되면 전사 연결을 미리 준비 (실패해도 녹음 버튼은 파일 방식으로 동작)
@@ -139,31 +150,35 @@ export default function SceneScreen() {
     play(l);
   }
 
-  // 서버 음성: 대사에 같이 온 audioUrl 우선, 없으면 다시 발급 (반응은 그 턴 음성만). 데모 모드는 기기 TTS.
+  // 실학습과 데모 모두 캐릭터 서버 음성. 늦게 도착한 이전 대사는 재생하지 않는다.
   async function play(ln: Line, refetch = false) {
-    const l = ln.line;
+    const request = ++voiceRequest.current;
     stopSpeak();
     player.current?.remove();
     player.current = null;
     setPlaying(true);
-    const live = eng.current?.mode === 'live';
-    const url = live ? (!refetch && ln.audio ? ln.audio : await eng.current!.voiceUrl(ln)) : null;
-    if (live && !url) {
-      setPlaying(false); // 음성이 없으면 대사는 그대로 두고 다시 듣기 제공
-      return;
-    }
-    if (url) {
-      try {
+    setNotice(null);
+    try {
+      const url = !refetch && ln.audio ? ln.audio : await eng.current!.voiceUrl(ln);
+      if (request !== voiceRequest.current) return;
+      if (!url) throw new Error('VOICE_UNAVAILABLE');
         const pl = createAudioPlayer({ uri: url });
         player.current = pl;
-        pl.addListener('playbackStatusUpdate', (s: any) => s.didJustFinish && setPlaying(false));
+        pl.addListener('playbackStatusUpdate', (s) => {
+          if (request !== voiceRequest.current) return;
+          if (s.error) { setPlaying(false); setNotice('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.'); }
+          else if (s.didJustFinish) setPlaying(false);
+        });
         pl.play();
         return;
-      } catch {}
+    } catch {
+      if (request !== voiceRequest.current) return;
+      setPlaying(false);
+      setNotice('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.');
     }
-    speak(l, { lang: st.pack === 'ko' ? 'ko-KR' : 'en-US', onDone: () => setPlaying(false) });
   }
   function stopPlay() {
+    voiceRequest.current++;
     stopSpeak();
     player.current?.pause();
     setPlaying(false);

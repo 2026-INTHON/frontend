@@ -1,5 +1,7 @@
 # Development and deployment
 
+Frontend hashed bundles are retained in `/srv/inthon/frontend-static` by `/usr/local/sbin/malo-preserve-fe-assets.py` before replacement. The HTTPS gateway serves this read-only store so an already open tab can still load its previous route chunks. Missing JS returns 404; SPA fallback applies only to app routes, and app HTML uses `Cache-Control: no-store`.
+
 `feat/*` → PR to `develop` → checks → merge → release PR to `main` → checks → verified GitHub Release → VM deployment (within about 1 minute plus build time).
 
 - `main`: production. `develop`: default integration branch. Use `feat/<topic>` for new features and `fix/<topic>` for fixes.

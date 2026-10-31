@@ -1,15 +1,18 @@
 import { ScrollView, View } from 'react-native';
+import { useEffect, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Btn, Card, Screen, T, Tag, TopBar } from '../../components/ui';
 import { C } from '../../lib/theme';
-import { speak } from '../../lib/voice';
+import { speak, stopSpeak } from '../../lib/voice';
 import { useStore } from '../../lib/store';
 
 // 18 오답 상세
 export default function MistakeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { mistakes } = useStore();
+  const { mistakes, char, persona, pack } = useStore();
+  const [voiceError,setVoiceError] = useState(false);
+  useEffect(()=>()=>stopSpeak(),[]);
   const m = mistakes.find((x) => x.id === id);
   if (!m) {
     return (
@@ -42,7 +45,8 @@ export default function MistakeDetail() {
         <Card style={{ borderLeftWidth: 4, borderLeftColor: C.lime }}>
           <T s="small">더 나은 말</T>
           <T s="body" style={{ marginTop: 4 }}>"{m.better}"</T>
-          <Btn label="발음 듣기" small kind="line" icon="volume-2" style={{ alignSelf: 'flex-start', marginTop: 10 }} onPress={() => speak(m.better)} />
+          <Btn label="발음 듣기" small kind="line" icon="volume-2" style={{ alignSelf: 'flex-start', marginTop: 10 }} onPress={() => {setVoiceError(false);speak(m.better,{char,persona,lang:pack==='ko'?'ko-KR':'en-US',onError:()=>setVoiceError(true)});}} />
+          {voiceError?<View accessibilityRole="alert"><T s="small">음성을 불러오지 못했어요. 발음 듣기를 다시 눌러 주세요.</T></View>:null}
         </Card>
         <T s="h3" style={{ marginTop: 6 }}>왜 문제였을까?</T>
         <View style={{ flexDirection: 'row', gap: 8 }}>
