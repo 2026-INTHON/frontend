@@ -1,0 +1,9 @@
+.git
+.github
+node_modules
+dist
+.expo
+.env
+.env.*
+*.pem
+*.key
