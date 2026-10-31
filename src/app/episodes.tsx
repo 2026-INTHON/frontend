@@ -9,7 +9,7 @@ import { CHAPTERS, CHARACTERS, CharId, IMG, PERSONAS, SERVER_CHAR, charById } fr
 import { api } from '../lib/api';
 import { useStore } from '../lib/store';
 import { useGenerationJobs } from '../lib/generations';
-import { learningCopy } from '../lib/learning-copy';
+import { useT } from '../lib/i18n';
 import { demoChapterText } from '../lib/demo-chapters';
 
 // 화면에 그릴 챕터 모양 (서버 /chapters 또는 데모 대본)
@@ -33,13 +33,13 @@ function fromDemo(lang:string): Chapter[] {
 // 11 에피소드: 캐릭터별 챕터 → 서브 챕터. 서버 챕터를 그대로 보여 줘요.
 export default function Episodes() {
   const st = useStore();
-  const copy = learningCopy(st.lang);
   const [char, setChar] = useState<CharId>(st.char);
   const [pw, setPw] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const persona = PERSONAS[char].find((p) => p.id === st.persona) ?? PERSONAS[char][2];
 
   const [tick, setTick] = useState(0); // 다시 시도
+  const t = useT();
   // 생성 작업: ready 가 되면 챕터 목록을 다시 불러와요
   const gen = useGenerationJobs(!st.demo, () => setTick((t) => t + 1));
   const myJobs = gen.jobs.filter((j) => j.characterId === SERVER_CHAR[char] && j.status !== 'ready');
@@ -64,7 +64,7 @@ export default function Episodes() {
         }));
         if (alive) setRes({ key, list: l });
       })
-      .catch(() => alive && setRes({ key, err: learningCopy(st.lang).loadError }));
+      .catch(() => alive && setRes({ key, err: 'ERR' }));
     return () => {
       alive = false;
     };
@@ -72,7 +72,7 @@ export default function Episodes() {
   // 데모 대본은 서윤 챕터만 있어요
   const cur = res?.key === key ? res : null;
   const list: Chapter[] | null = st.demo ? (char === 'seoyun' ? fromDemo(st.lang) : []) : (cur?.list ?? null);
-  const err = st.demo ? null : (cur?.err ?? null);
+  const err = st.demo ? null : cur?.err ? t('챕터를 불러오지 못했어요.') : null;
   const load = () => setTick((t) => t + 1);
   // 펼친 챕터: 직접 고르기 전엔 진행 중인 챕터
   const shown = open ?? list?.find((c) => c.subs.some((s) => s.state === 'now'))?.id ?? list?.[0]?.id ?? null;
@@ -80,33 +80,33 @@ export default function Episodes() {
   const c = charById(char);
   return (
     <Screen>
-      <TopBar title={`${c.name} · ${copy.chapters}`} />
+      <TopBar title={`${t(c.name)} · ${t('챕터')}`} />
       {/* 캐릭터 바꿔 보기 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 24, paddingVertical: 8 }}>
         {CHARACTERS.map((x) => (
-          <Chip key={x.id} label={`${x.name}${x.free || st.subscribed ? '' : ' 🔒'}`} on={x.id === char} onPress={() => { setChar(x.id); setOpen(null); if (x.free || st.subscribed) st.set({ char: x.id, persona: PERSONAS[x.id].some((p) => p.id === st.persona) ? st.persona : 'calm' }); }} />
+          <Chip key={x.id} label={`${t(x.name)}${x.free || st.subscribed ? '' : ' 🔒'}`} on={x.id === char} onPress={() => { setChar(x.id); setOpen(null); if (x.free || st.subscribed) st.set({ char: x.id, persona: PERSONAS[x.id].some((p) => p.id === st.persona) ? st.persona : 'calm' }); }} />
         ))}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 24 }}>
-        <Tag label={c.role} tone="white" />
-        <Tag label={`성격 · ${persona.name}`} tone="white" />
-        {st.demo ? <Tag label="예시 대화" tone="grey" /> : null}
+        <Tag label={t(c.role)} tone="white" />
+        <Tag label={`${t('성격')} · ${t(persona.name)}`} tone="white" />
+        {st.demo ? <Tag label={t('예시 대화')} tone="grey" /> : null}
       </View>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 12 }}>
         {/* 생성 중·실패한 나만의 챕터 (퍼센트 게이지 없이 단계만) */}
         {myJobs.map((j) => (
           <View key={j.id} style={{ backgroundColor: C.white, borderRadius: 20, padding: 14, gap: 6, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.ink }}>
-            <T s="small">나만의 챕터</T>
-            <T s="h3">{j.label || '새 챕터'}</T>
+            <T s="small">{t('나만의 챕터')}</T>
+            <T s="h3">{j.label || t('새 챕터')}</T>
             {j.status === 'failed' ? (
               <>
-                <T s="small">{j.error?.message ?? '만들지 못했어요.'}</T>
-                {j.error?.retryable !== false ? <Btn label="이어서 다시 만들기" small kind="line" icon="rotate-cw" onPress={() => api.retryGeneration(j.id).then(() => gen.refresh()).catch(() => null)} /> : null}
+                <T s="small">{j.error?.message ?? t('만들지 못했어요.')}</T>
+                {j.error?.retryable !== false ? <Btn label={t('이어서 다시 만들기')} small kind="line" icon="rotate-cw" onPress={() => api.retryGeneration(j.id).then(() => gen.refresh()).catch(() => null)} /> : null}
               </>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <ActivityIndicator color={C.ink} size="small" />
-                <T s="small">장면 만드는 중…</T>
+                <T s="small">{t('장면 만드는 중…')}</T>
               </View>
             )}
           </View>
@@ -114,17 +114,17 @@ export default function Episodes() {
         {err ? (
           <View style={{ backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 10 }}>
             <T s="label">{err}</T>
-            <Btn label={copy.retry} small icon="rotate-cw" onPress={load} />
+            <Btn label={t('다시 시도')} small icon="rotate-cw" onPress={load} />
           </View>
         ) : !list ? (
           <View style={{ padding: 24, alignItems: 'center', gap: 8 }}>
             <ActivityIndicator color={C.ink} />
-            <T s="small">{copy.loading}</T>
+            <T s="small">{t('챕터 불러오는 중…')}</T>
           </View>
         ) : !list.length ? (
           <View style={{ backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 6 }}>
-            <T s="label">아직 열린 챕터가 없어요</T>
-            <T s="sub">{st.demo ? '예시 대화는 서윤 챕터만 있어요.' : '다른 캐릭터를 골라 보세요.'}</T>
+            <T s="label">{t('아직 열린 챕터가 없어요')}</T>
+            <T s="sub">{st.demo ? t('예시 대화는 서윤 챕터만 있어요.') : t('다른 캐릭터를 골라 보세요.')}</T>
           </View>
         ) : null}
         {list?.map((ch) => {
@@ -138,7 +138,7 @@ export default function Episodes() {
                 disabled={ch.generating}
                 onPress={() => (locked ? setPw(true) : setOpen(isOpen ? '' : ch.id))}
                 accessibilityRole="button"
-                accessibilityLabel={`챕터 ${ch.no} ${ch.title}${locked ? ', 구독하면 열려요' : ch.generating ? ', 생성 중' : ''}`}
+                accessibilityLabel={`${t('챕터')} ${ch.no} ${t(ch.title)}${locked ? `, ${t('구독하면 열려요')}` : ch.generating ? `, ${t('생성 중')}` : ''}`}
                 style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
               >
                 <View style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: C.bg, overflow: 'hidden' }}>
@@ -146,11 +146,11 @@ export default function Episodes() {
                   {locked ? <Feather name="lock" size={18} color={C.ink} style={{ position: 'absolute', top: 22, alignSelf: 'center' }} /> : null}
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <T s="small">{ch.personal ? '나만의 챕터' : `CHAPTER ${ch.no}`}</T>
-                  <T s="h3">{ch.title}</T>
-                  <T s="small">{ch.generating ? '장면 만드는 중…' : ch.failed ? '생성하지 못했어요' : locked ? '구독하면 열려요' : `${ch.desc ? `${ch.desc} · ` : ''}${done}/${ch.subs.length}`}</T>
+                  <T s="small">{ch.personal ? t('나만의 챕터') : `CHAPTER ${ch.no}`}</T>
+                  <T s="h3">{t(ch.title)}</T>
+                  <T s="small">{ch.generating ? t('장면 만드는 중…') : ch.failed ? t('생성하지 못했어요') : locked ? t('구독하면 열려요') : `${ch.desc ? `${t(ch.desc)} · ` : ''}${done}/${ch.subs.length}`}</T>
                 </View>
-                {now ? <Tag label="진행 중" tone="lime" /> : ch.subs.length && done === ch.subs.length ? <Tag label="완료" tone="dark" /> : null}
+                {now ? <Tag label={t('진행 중')} tone="lime" /> : ch.subs.length && done === ch.subs.length ? <Tag label={t('완료')} tone="dark" /> : null}
                 <Feather name={locked ? 'lock' : ch.generating ? 'loader' : isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.ink} />
               </Pressable>
               {isOpen ? (
@@ -166,8 +166,8 @@ export default function Episodes() {
                         accessibilityState={{ disabled: !can }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: s.state === 'now' && can ? C.lime : C.bg, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, opacity: can ? 1 : 0.5 }}
                       >
-                        <T s="label" style={{ flex: 1 }}>{s.title}</T>
-                        {!can ? <T s="small">준비 중</T> : s.state === 'done' && s.grade ? <T s="label">{s.grade}</T> : null}
+                        <T s="label" style={{ flex: 1 }}>{t(s.title)}</T>
+                        {!can ? <T s="small">{t('준비 중')}</T> : s.state === 'done' && s.grade ? <T s="label">{s.grade}</T> : null}
                         <Feather name={!can ? 'lock' : s.state === 'done' ? 'check' : s.state === 'now' ? 'play' : 'chevron-right'} size={16} color={C.ink} />
                       </Pressable>
                     );
@@ -180,7 +180,7 @@ export default function Episodes() {
         {!st.demo ? (
           <Pressable onPress={() => router.push('/chapter-create')} accessibilityRole="button" style={{ height: 56, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.ink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Feather name="plus" size={18} color={C.ink} />
-            <T s="label">나만의 챕터 만들기</T>
+            <T s="label">{t('나만의 챕터 만들기')}</T>
           </Pressable>
         ) : null}
       </ScrollView>

@@ -5,10 +5,12 @@ import { Btn, Screen, T } from '../../components/ui';
 import { Dots } from '../../components/scene-parts';
 import { finishGoogle } from '../../lib/auth';
 import { useStore } from '../../lib/store';
+import { useT } from '../../lib/i18n';
 
 // Google 로그인 복귀 화면 (웹: localhost:8081/auth/callback, 앱: malo://auth/callback)
 // 앱에서는 openAuthSessionAsync 가 이미 처리하므로 여기선 돌아가기만 해요.
 export default function AuthCallback() {
+  const t = useT();
   const st = useStore();
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
@@ -22,7 +24,7 @@ export default function AuthCallback() {
     finishGoogle(url).then((r) => {
       if (r.ok) {
         router.replace(st.languageSelected && st.onboarded ? '/home' : '/onboarding/lang');
-      } else setErr(r.reason === 'cancel' ? '로그인을 취소했어요. 게스트 기록은 그대로예요.' : r.message ?? '로그인하지 못했어요.');
+      } else setErr(r.reason === 'cancel' ? t('로그인을 취소했어요. 게스트 기록은 그대로예요.') : t('로그인하지 못했어요.'));
     });
   }, []);
   return (
@@ -30,13 +32,13 @@ export default function AuthCallback() {
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
         {err ? (
           <>
-            <T s="h2">로그인하지 못했어요</T>
+            <T s="h2">{t('로그인하지 못했어요')}</T>
             <T s="sub" style={{ textAlign: 'center' }}>{err}</T>
-            <Btn label="돌아가기" style={{ alignSelf: 'stretch', marginTop: 8 }} onPress={() => router.replace('/')} />
+            <Btn label={t('돌아가기')} style={{ alignSelf: 'stretch', marginTop: 8 }} onPress={() => router.replace('/')} />
           </>
         ) : (
           <>
-            <T s="h2">Google 계정 확인 중</T>
+            <T s="h2">{t('Google 계정 확인 중')}</T>
             <Dots />
           </>
         )}

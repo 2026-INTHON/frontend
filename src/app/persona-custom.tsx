@@ -5,6 +5,7 @@ import { Avatar, Btn, Card, CoinPill, Screen, T, TopBar } from '../components/ui
 import { C } from '../lib/theme';
 import { IMG } from '../lib/data';
 import { useStore } from '../lib/store';
+import { useT } from '../lib/i18n';
 
 const SLIDERS = [
   ['직설적', '돌려 말함', 0.3],
@@ -15,24 +16,25 @@ const SLIDERS = [
 
 // 23 성격 커스텀 (코인)
 export default function PersonaCustom() {
+  const t = useT();
   const st = useStore();
   const [v, setV] = useState<number[]>(SLIDERS.map((s) => s[2]));
   return (
     <Screen>
-      <TopBar title="성격 커스텀" right={<CoinPill />} />
+      <TopBar title={t('성격 커스텀')} right={<CoinPill />} />
       <ScrollView contentContainerStyle={{ padding: 24, gap: 10 }}>
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, alignSelf: 'flex-start' }}>
           <Avatar src={IMG.card.seoyun} size={56} />
           <View>
-            <T s="h3">서윤</T>
-            <T s="small">기본 성격 · 장난</T>
+            <T s="h3">{t('서윤')}</T>
+            <T s="small">{t('기본 성격 · 장난')}</T>
           </View>
         </Card>
         {SLIDERS.map(([a, b], i) => (
           <Card key={a} style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row' }}>
-              <T s="label" style={{ flex: 1 }}>{a}</T>
-              <T s="label">{b}</T>
+              <T s="label" style={{ flex: 1 }}>{t(a as string)}</T>
+              <T s="label">{t(b as string)}</T>
             </View>
             {/* 5칸 눌러서 고르는 간단 슬라이더 */}
             <View style={{ flexDirection: 'row', alignItems: 'center', height: 24 }}>
@@ -45,11 +47,11 @@ export default function PersonaCustom() {
             </View>
           </Card>
         ))}
-        <T s="small" style={{ marginTop: 8 }}>이렇게 말해요</T>
+        <T s="small" style={{ marginTop: 8 }}>{t('이렇게 말해요')}</T>
         <T s="body">"야 30분 늦었잖아~ 오늘 커피는 네가 사는 걸로!"</T>
       </ScrollView>
       <View style={{ paddingHorizontal: 16 }}>
-        <Btn label="200 코인으로 저장" onPress={() => { if (st.coins >= 200) st.addCoins(-200); router.back(); }} />
+        <Btn label={t('200 코인으로 저장')} onPress={() => { if (st.coins >= 200) st.addCoins(-200); router.back(); }} />
       </View>
     </Screen>
   );

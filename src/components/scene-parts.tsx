@@ -3,6 +3,7 @@ import { Animated, Easing, Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { C, F } from '../lib/theme';
 import { T } from './ui';
+import { useT } from '../lib/i18n';
 
 // 막대 파형 (녹음 중엔 소리 크기를 따라 움직여요)
 export function Wave({ level = -40, bars = 14, color = C.ink, live = true }: { level?: number; bars?: number; color?: string; live?: boolean }) {
@@ -51,13 +52,14 @@ const CUE_ICON: Record<string, any> = { 표정: 'smile', 억양: 'trending-up', 
 
 // 비언어 단서 칩: 표정 · 억양 · 망설임 · 침묵 · 행동
 export function Cues({ cues }: { cues?: { k: string; v: string }[] }) {
+  const t = useT();
   if (!cues?.length) return null;
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
       {cues.map((c, i) => (
         <View key={i} style={{ maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 9, paddingVertical: 4 }}>
           <Feather name={CUE_ICON[c.k] ?? 'eye'} size={11} color={C.sub} />
-          <T s="small" style={{ flexShrink: 1, color: C.ink, fontSize: 12 }}>{c.k} · {c.v}</T>
+          <T s="small" style={{ flexShrink: 1, color: C.ink, fontSize: 12 }}>{t(c.k)} · {t(c.v)}</T>
         </View>
       ))}
     </View>
@@ -68,6 +70,7 @@ export function Cues({ cues }: { cues?: { k: string; v: string }[] }) {
 export type MarkKind = 'O' | '△' | 'X' | '?';
 const MARK_NAME: Record<MarkKind, string> = { O: '의도 전달 성공', '△': '구체적인 설명 필요', X: '말실수', '?': '의도 불명확' };
 export function ReactionBadge({ mark, size = 34, onPress }: { mark: MarkKind; size?: number; onPress?: () => void }) {
+  const t = useT();
   const bg = mark === 'O' ? C.lime : mark === 'X' ? C.red : C.white;
   const s = size;
   const body = (
@@ -85,9 +88,9 @@ export function ReactionBadge({ mark, size = 34, onPress }: { mark: MarkKind; si
       )}
     </View>
   );
-  const label = `${mark === 'O' ? 'O' : mark === '△' ? '세모' : mark === 'X' ? 'X' : '물음표'} · ${MARK_NAME[mark]}`;
+  const label = `${mark === 'O' ? 'O' : mark === '△' ? t('세모') : mark === 'X' ? 'X' : t('물음표')} · ${t(MARK_NAME[mark])}`;
   return onPress ? (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${label}, 이유 보기`}>
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${label}, ${t('이유 보기')}`}>
       {body}
     </Pressable>
   ) : (
@@ -97,6 +100,7 @@ export function ReactionBadge({ mark, size = 34, onPress }: { mark: MarkKind; si
 export const markName = (m: MarkKind) => MARK_NAME[m];
 
 export function LineCard({ name, line, sub, action, cues, playing, onPlay, sec = 3, mark, onMarkPress }: { name: string; line: string; sub?: string | null; action?: string; cues?: { k: string; v: string }[]; playing?: boolean; onPlay?: () => void; sec?: number; mark?: MarkKind | null; onMarkPress?: () => void }) {
+  const t = useT();
   return (
     <View>
       {/* 반응 배지: 말풍선 오른쪽 위 모서리 */}
@@ -115,7 +119,7 @@ export function LineCard({ name, line, sub, action, cues, playing, onPlay, sec =
         {action ? <T s="sub" style={{ marginTop: 6 }}>{action}</T> : null}
         <Cues cues={cues} />
         {onPlay ? (
-          <Pressable onPress={onPlay} accessibilityRole="button" accessibilityLabel={playing ? '대사 멈추기' : '대사 다시 듣기'} style={{ marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6 }}>
+          <Pressable onPress={onPlay} accessibilityRole="button" accessibilityLabel={playing ? t('대사 멈추기') : t('대사 다시 듣기')} style={{ marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
               <Feather name={playing ? 'pause' : 'play'} size={12} color={C.white} />
             </View>
