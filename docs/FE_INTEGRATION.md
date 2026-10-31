@@ -14,7 +14,7 @@
 | P0 | 나만의 챕터 생성·생성중 카드·재접속 복원 | 생성 예약 후 다른 학습 가능, 새로고침 후 같은 작업 확인 |
 | P0 | 녹음 중 전사와 실측 | 녹음 종료부터 화면 반응까지 시간을 기록하고 5초 초과에도 실제 응답 대기 |
 | P1 | PWA Web Push | 알림 허용한 웹앱에서 닫힌 화면의 생성 완료 알림과 본인 챕터 이동 |
-| P1 | 고정 GLB 캐릭터 렌더러 | 외모를 유지한 채 표정·고개·호흡·말하기 동작 재생 |
+| P1 | 표정·몸짓 이미지 전환 | 이미지 목록을 캐시하고 BE의 render.assetKey로 같은 캐릭터 표정 전환 |
 | P2 | 카드 섞임·서브 챕터 전환·화면 높이 조정 | 작은 아이폰·갤럭시에서도 녹음 버튼과 대사 영역 사용 가능 |
 
 ## 서버 주소와 공통 규칙
@@ -24,6 +24,8 @@ EXPO_PUBLIC_API_URL=https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.
 ```
 
 `src/lib/api.ts`가 `/api/v1`을 붙이므로 환경변수에는 호스트만 넣는다. [Swagger](https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.com/api/v1/docs)에서 최신 형식을 확인한다. 성공 응답은 `{data, meta}`, 실패는 `{error:{code,message,retryable,requestId}}`다. 기존 unwrap·토큰 저장·refresh·PKCE 코드는 재사용한다.
+
+선택 언어 자막과 음성은 [최신 대화 API 요청사항](BE_SUBTITLE_AUDIO_HANDOFF.md)을 먼저 따른다.
 
 FE에는 Azure/OpenAI/Lablup 키, Supabase service role, SSH private key를 넣지 않는다. 음성·생성 API는 Malo Bearer 토큰으로 BE를 호출한다. 실시간 STT의 60초 임시 자격증명과 VAPID 공개키만 예외적으로 클라이언트에서 사용한다.
 
@@ -137,7 +139,7 @@ type GenerationJob = {
 
 ## 캐릭터 모델과 계정 테스트
 
-정면 2.5D GLB는 확정한 얼굴·헤어·의상 텍스처를 메시·본에 연결한 **같은 모델**을 재생한다. 눈·입·눈썹 레이어로 표정, 본·애니메이션으로 끄덕임·갸웃·호흡·말하기를 제어한다. TTS마다 외모 이미지를 새로 만들지 않는다. 서버 캐릭터 ID로 모델을 매핑하고, 모델 로딩 실패 시 같은 인물의 서버 PNG로 대체한다. GLB 파일명·모프·클립 명세는 모델 작업 브랜치의 실제 manifest에 맞춰 연결한다. 현재 `/characters`는 PNG/card URL을 제공하며 이 문서는 확정되지 않은 GLB URL을 API 필드로 가정하지 않는다.
+GLB 모델 대신 같은 캐릭터의 표정·몸짓 이미지를 미리 받는 방식으로 진행한다. `GET /assets/characters`를 미리 로드하고 `session.npc.render` 및 `turn.render`에 따라 전환한다. 현재 기본 표정 이미지 20개가 준비돼 있으며, 추가 몸짓은 등록된 것만 사용한다. 자세한 필드·대체 순서는 [캐릭터 이미지 요청사항](CHARACTER_IMAGES.md)을 따른다.
 
 Google 로그인은 PR 7의 PKCE·게스트 이관을 유지한다. BE는 기존 중첩 `google.supabaseUrl/publishableKey`와 PR 7이 읽는 최상위 공개 설정을 함께 제공한다. 배포 웹의 `/auth/callback`이 Supabase Redirect URLs에 허용돼 있어야 한다. 네이티브 `malo://auth/callback`은 Expo Go가 커스텀 scheme 앱이 되는 것을 뜻하지 않는다. **구독·앱스토어 결제 없이 두 기기의 전체 로그인·알림 흐름을 테스트할 경로는 HTTPS PWA**다. Expo Go는 UI·API·녹음 테스트에 사용하고, 전용 scheme OAuth는 해당 scheme을 포함한 개발 빌드에서 검증한다.
 
