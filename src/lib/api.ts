@@ -112,6 +112,8 @@ export type SubmitTurnResult = { turn: ApiTurn; session: PlaySession; result: Se
 export type ApiScene = { id: string; title: string; situation: string; goal: string; pack: 'ko' | 'en'; characterId: string; personalityId: string; nodeCount: number; source?: string };
 export type HintRes = { step?: 1 | 2; clue?: RawCue[] | null; hiddenThought?: string | null; tip?: string | null };
 
+export type CharacterCardProfile = {name:string;occupation:string;age:string;hobbies:string[];favoriteFoods:string[];dislikes:string[];currentInterests:string[]};
+export type CharacterCard = {characterId:string;personalityId:string;personalityName:string;language:string;revision:string;profile:CharacterCardProfile};
 export type CharacterProfile = {
   age: string; role: string; occupation: string; introduction: string; relationship: string;
   values: string[]; traits: string[]; likes: string[]; dislikes: string[]; hobbies: string[];
@@ -121,7 +123,7 @@ export type CharacterImage = {
   assetKey: string; characterId: string; emotion: Emotion; imageUrl: string;
   reaction?: string | null; endingPreferred?: boolean;
 };
-export type ApiCharacter = { id: string; clientKey?: string; name: string; role?: string; free?: boolean; locked?: boolean; imageUrl?: string | null; cardUrl?: string | null; personalities?: { id: string; clientKey?: string; name: string; short?: string; long?: string; description?: string; level?: string; profile?: CharacterProfile; profileRevision?: string }[] };
+export type ApiCharacter = { id: string; clientKey?: string; name: string; role?: string; free?: boolean; locked?: boolean; imageUrl?: string | null; cardUrl?: string | null; personalities?: { id: string; clientKey?: string; name: string; short?: string; long?: string; description?: string; level?: string; profile?: CharacterProfile; cardProfile?: CharacterCardProfile; profileRevision?: string }[] };
 export type ApiSub = { id: string; title: string; translation?: {language: string; title: string}; sceneId?: string | null; state?: 'done' | 'now' | 'open' | 'locked'; score?: number | null; grade?: string | null; availability?: 'ready' | 'unavailable' | 'generating' | string };
 export type ApiChapter = { id: string; no?: number; title: string; translation?: {language: string; title: string; desc: string}; description?: string; desc?: string; source?: 'curriculum' | 'examples' | 'personal'; locked?: boolean; generationStatus?: 'ready' | 'generating' | 'failed' | null; characterId?: string; subs: ApiSub[] };
 
@@ -260,6 +262,7 @@ export const api = {
   health: () => call<{ status?: string }>('/health', {}, false, 5000),
   scenes: (q: { pack?: string; characterId?: string; personalityId?: string }) => call<ApiScene[]>('/scenes?' + qs(q), {}, false),
   characters: () => call<ApiCharacter[]>('/characters', {}, false, 10000),
+  characterProfile: (characterId:string,personalityId:string,language:string) => call<CharacterCard>(`/characters/${encodeURIComponent(characterId)}/personalities/${encodeURIComponent(personalityId)}/profile?language=${encodeURIComponent(language)}`,{},false,30000),
   characterImages: () => call<{ items: CharacterImage[] }>('/assets/characters', {}, false, 10000),
   chapters: (q: { pack: string; characterId: string; language?: string }) => call<ApiChapter[]>('/chapters?' + qs(q), {}, true, q.language && q.language !== 'ko' ? 120000 : 15000),
   // aiMode 를 빼면 옛 예시는 mock 채점이라 꼭 live 로 보내요

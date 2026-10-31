@@ -10,6 +10,7 @@ import { GoogleButton } from '../components/google-button';
 import { PushRow } from '../components/push-row';
 import { disablePush } from '../lib/push';
 import { normLang, UI_LANGS, useT } from '../lib/i18n';
+import { reactionCopy } from '../lib/learning-copy';
 
 // 21 설정
 export default function Settings() {
@@ -32,6 +33,7 @@ export default function Settings() {
           <Row k={t('앱 표시 언어')} right={<Chip label={UI_LANGS.find((l) => l.id === ui)?.name ?? 'English'} dark onPress={() => router.push({ pathname: '/onboarding/lang', params: { returnTo: 'settings' } })} />} />
           <Row k={t('음성 속도')} right={<View style={{ flexDirection: 'row', gap: 4 }}>{['0.8x', '1.0x', '1.2x'].map((x) => <Chip key={x} label={x} on={speed === x} dark onPress={() => setSpeed(x)} />)}</View>} />
           <Row k={t('자막 보기')} right={<Toggle value={sub} onValueChange={setSub} />} />
+          <Row k={reactionCopy(st.lang).effects} right={<Toggle value={st.soundEffects} onValueChange={(soundEffects) => st.set({ soundEffects })} />} />
           <Row k={t('속마음 힌트 자동 표시')} right={<Toggle value={auto} onValueChange={setAuto} />} />
         </Card>
         <T s="small" style={{ marginTop: 8 }}>{t('발표·체험')}</T>
