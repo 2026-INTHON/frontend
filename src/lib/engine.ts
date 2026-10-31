@@ -300,6 +300,8 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       if (!t) throw new SceneError('unavailable', '지금 할 수 있는 장면이 없어요.');
       id = t.sceneId;
     }
+    // 데모에서 저장된 이어하기 링크도 선택한 성격의 서버 예시로 연결해요.
+    if (sceneById(id)) id = `${id}-${SERVER_PERSONA[o.persona]}`;
     // 다시 도전: 서버 retry 로 새 세션 (기존 결과는 그대로)
     ses = o.retryOf ? await api.retry(o.retryOf) : await api.start(id, { personalityId: SERVER_PERSONA[o.persona], subtitleLanguage: o.lang });
   } catch (err) {
