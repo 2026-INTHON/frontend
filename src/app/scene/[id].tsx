@@ -14,9 +14,12 @@ import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
 import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
 import { useStore } from '../../lib/store';
+import { useLang, useT } from '../../lib/i18n';
 
-type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized' | 'reaction';
+type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized';
 type Log = { who: 'char' | 'me'; text: string; mark?: Mark };
+// 대사를 넘긴 뒤 남겨 두는 직전 반응 (작은 말풍선 + 판정 배지)
+type Reaction = { text: string; sub?: string | null; mark: Mark };
 
 const TONE: Record<string, string> = { office: 'rgba(220,224,229,0.35)', cafe: 'rgba(238,230,219,0.35)', street: 'rgba(217,222,232,0.35)' };
 
@@ -26,6 +29,8 @@ export default function SceneScreen() {
   const st = useStore();
   const ins = useSafeAreaInsets();
   const rec = useRec();
+  const t = useT();
+  const lang = useLang();
 
   const eng = useRef<Engine | null>(null);
   const [ready, setReady] = useState(false);
@@ -51,11 +56,14 @@ export default function SceneScreen() {
   const [detail, setDetail] = useState(false); // 피드백 자세히 (대화를 막지 않고, 원할 때만 열어요)
   const [pause, setPause] = useState(false);
   const [history, setHistory] = useState(false);
-  const [fail, setFail] = useState(false);
+  const [ended, setEnded] = useState(false); // 마지막 대사까지 끝남 → '결과 보기'
+  const [react, setReact] = useState<Reaction | null>(null);
   const [judging, setJudging] = useState(false);
   const [hintNudge, setHintNudge] = useState(false);
   const [log, setLog] = useState<Log[]>([]);
   const holdAt = useRef(0);
+  const sending = useRef(false);
+  const finishing = useRef(false);
   // 웹 + 서버 모드면 녹음 중 전사, 안 되면 파일 녹음 후 전사
   const rt = useRef<RealtimeTranscriber | null>(null);
   const recMode = useRef<'rt' | 'file'>('file');
@@ -85,7 +93,12 @@ export default function SceneScreen() {
     setLoadErr(null);
     setPhase('brief');
     setOut(null);
+    setReact(null);
+    setLineMark(null);
+    setEnded(false);
+    setDetail(false);
     setLog([]);
+    finishing.current = false;
     eng.current = null;
     createEngine(sceneId, { demo: st.demo, pack: st.pack, lang: st.lang, char: st.char, persona: st.persona, retryOf: retryOf ? String(retryOf) : undefined })
       .then((e) => {
@@ -96,7 +109,7 @@ export default function SceneScreen() {
         setReady(true);
         st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, char: e.char, persona: e.persona, status: 'playing', progress: e.progress(), at: new Date().toISOString() } });
       })
-      .catch((err) => request === loadRequest.current && setLoadErr(err instanceof SceneError ? err.message : '장면을 불러오지 못했어요. 다시 시도해 주세요.'));
+      .catch((err) => request === loadRequest.current && setLoadErr(err instanceof SceneError ? err.message : t('장면을 불러오지 못했어요. 다시 시도해 주세요.')));
   }
   function invalidateLoad() { loadRequest.current++; }
   useEffect(() => {
@@ -147,35 +160,42 @@ export default function SceneScreen() {
     setLine(l);
     setLineMark(null);
     setLog((g) => [...g, { who: 'char', text: l.line }]);
-    play(l);
+    play([l]);
   }
 
-  // 실학습과 데모 모두 캐릭터 서버 음성. 늦게 도착한 이전 대사는 재생하지 않는다.
-  async function play(ln: Line, refetch = false) {
+  // 실학습과 데모 모두 캐릭터 서버 음성. 여러 대사(반응 → 다음 대사)는 차례로 재생해요.
+  // 늦게 도착한 이전 대사는 재생하지 않고, 녹음을 시작하면 바로 멈춰요.
+  async function play(lines: Line[], refetch = false) {
     const request = ++voiceRequest.current;
     stopSpeak();
     player.current?.remove();
     player.current = null;
-    setPlaying(true);
     setNotice(null);
-    try {
-      const url = !refetch && ln.audio ? ln.audio : await eng.current!.voiceUrl(ln);
+    for (const ln of lines) {
       if (request !== voiceRequest.current) return;
-      if (!url) throw new Error('VOICE_UNAVAILABLE');
-        const pl = createAudioPlayer({ uri: url });
-        player.current = pl;
-        pl.addListener('playbackStatusUpdate', (s) => {
-          if (request !== voiceRequest.current) return;
-          if (s.error) { setPlaying(false); setNotice('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.'); }
-          else if (s.didJustFinish) setPlaying(false);
+      setPlaying(true);
+      try {
+        const url = !refetch && ln.audio ? ln.audio : await eng.current!.voiceUrl(ln);
+        if (request !== voiceRequest.current) return;
+        if (!url) throw new Error('VOICE_UNAVAILABLE');
+        await new Promise<void>((resolve, reject) => {
+          const pl = createAudioPlayer({ uri: url });
+          player.current = pl;
+          pl.addListener('playbackStatusUpdate', (st: any) => {
+            if (request !== voiceRequest.current) return resolve();
+            if (st.error) reject(new Error('VOICE_ERROR'));
+            else if (st.didJustFinish) resolve();
+          });
+          pl.play();
         });
-        pl.play();
+      } catch {
+        if (request !== voiceRequest.current) return;
+        setPlaying(false);
+        setNotice(t('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.'));
         return;
-    } catch {
-      if (request !== voiceRequest.current) return;
-      setPlaying(false);
-      setNotice('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.');
+      }
     }
+    if (request === voiceRequest.current) setPlaying(false);
   }
   function stopPlay() {
     voiceRequest.current++;
@@ -209,7 +229,7 @@ export default function SceneScreen() {
     recMode.current = 'file';
     const ok = await rec.start();
     if (!ok) {
-      setNotice('마이크를 켜지 못했어요. 직접 입력해 주세요.');
+      setNotice(t('마이크를 켜지 못했어요. 직접 입력해 주세요.'));
       setPhase('typing');
       return;
     }
@@ -232,7 +252,7 @@ export default function SceneScreen() {
         setPhase('recognized');
       } catch {
         rt.current?.close();
-        setNotice('잘 못 들었어요. 다시 말하거나 직접 입력해 주세요.');
+        setNotice(t('잘 못 들었어요. 다시 말하거나 직접 입력해 주세요.'));
         setPhase('talk');
       }
       return;
@@ -246,7 +266,7 @@ export default function SceneScreen() {
       r = await e.transcribe(uri);
     } catch (err) {
       // 가짜 문장으로 채우지 않고 다시 말하기·직접 입력으로
-      setNotice(err instanceof SceneError ? `${err.message} 다시 말하거나 직접 입력해 주세요.` : '잘 못 들었어요. 다시 말하거나 직접 입력해 주세요.');
+      setNotice(err instanceof SceneError ? `${err.message} ${t('다시 말하거나 직접 입력해 주세요.')}` : t('잘 못 들었어요. 다시 말하거나 직접 입력해 주세요.'));
       setPhase('talk');
       return;
     }
@@ -257,88 +277,71 @@ export default function SceneScreen() {
   }
 
   // ----- 보내기 → 판정 -----
+  // 판정이 오면 캐릭터 반응을 바로 보여 주고 대화를 이어가요. 피드백 시트는 자동으로 뜨지 않아요 (배지를 눌렀을 때만).
   async function send(a: string, voice?: boolean) {
     const ans = a.trim();
-    if (!ans || judging) return;
+    if (!ans || sending.current || ended || !eng.current) return;
+    sending.current = true; // 연타·엔터 반복으로 두 번 보내지 않게
     setAnswer(ans);
     setSendErr(null);
     setWaitSec(0);
     setJudging(true);
+    const e = eng.current;
+    const said = line.line;
     let o: Out;
     try {
-      o = await eng.current!.submit(ans, voice ? { transcriptId: tid, realtime: rtHeard } : undefined);
+      o = await e.submit(ans, voice ? { transcriptId: tid, realtime: rtHeard } : undefined);
     } catch (err) {
       // AI 오류: 체력 그대로, 같은 답을 다시 보낼 수 있게 (가짜 판정 없음)
+      sending.current = false;
       setJudging(false);
-      setSendErr(err instanceof SceneError ? err.message : '답변을 보내지 못했어요.');
+      setSendErr(err instanceof SceneError ? err.message : t('답변을 보내지 못했어요.'));
       return;
     }
+    sending.current = false;
     setText('');
     setJudging(false);
     setOut(o);
-    setHearts(eng.current!.lives);
-    setLog((g) => [...g, { who: 'me', text: ans }, { who: 'char', text: o.reply, mark: o.mark }]);
-    // F안: 캐릭터 반응 말풍선 + 모서리 배지를 먼저 보여 주고, 잠시 뒤 이유 시트
-    setLine(o.replyLine);
-    setLineMark(o.mark);
-    play(o.replyLine);
     setDetail(false);
-    setPhase('reaction');
+    setHearts(e.lives);
+    setLog((g) => [...g, { who: 'me', text: ans }, { who: 'char', text: o.reply, mark: o.mark }]);
     if (o.ok) haptic.good();
     else {
       haptic.bad();
       if (o.mark === 'X' && !o.native) {
-        const E2 = eng.current!;
-        st.addMistake({ id: `${E2.sceneId}-${Date.now()}`, scene: E2.sceneId, title: E2.title, who: `${ch.name} · ${persona.name}`, when: '오늘', said: ans, better: o.better, why: o.why, fixed: false, line: E2.line.line });
+        st.addMistake({ id: `${e.sceneId}-${Date.now()}`, scene: e.sceneId, title: e.title, who: `${t(ch.name)} · ${t(persona.name)}`, when: t('오늘'), said: ans, better: o.better, why: o.why, fixed: false, line: said });
       }
     }
-  }
-
-  // 반응 말풍선을 잠깐 보여 준 뒤 대화를 막지 않고 이어가요.
-  // 통하면 다음 대사로, 아니면 같은 대사로 돌아가서 바로 다시 말할 수 있어요. 피드백은 아래 한 줄 + '자세히'.
-  useEffect(() => {
-    if (phase !== 'reaction') return;
-    const t = setTimeout(settle, 1600);
-    return () => clearTimeout(t);
-  }, [phase]);
-  const movesOn = (o: Out) => o.ok || (o.mark === '△' && !o.native && o.advance);
-  function settle() {
-    if (!out) return;
-    // 서버 모드: 체력이 다 떨어지면 세션이 끝나고 배드엔딩이 와요 → 결과 화면에서 엔딩 보여 주기
-    if (out.failed) return E?.mode === 'live' ? finish() : setFail(true);
-    if (movesOn(out)) {
-      if (out.done) return; // 마지막 대사: 아래 '결과 보기' 버튼
-      return next();
+    // 장면 끝 (서버가 세션을 끝낸 경우 포함): 마지막 반응 + '결과 보기'
+    if (o.done || o.failed) {
+      setReact(null);
+      setLine(o.replyLine);
+      setLineMark(o.mark);
+      setEnded(true);
+      setPhase('talk');
+      play([o.replyLine]);
+      return;
     }
-    retry();
-  }
-  function openReason() {
-    setDetail(true);
-  }
-
-  function retry() {
-    setLine(eng.current!.line);
-    setLineMark(null);
-    setHintNudge(true);
-    setPhase('talk');
-  }
-
-  function cont() {
-    // △ 진행: 서버가 advance 라고 했으면 다음 대사, 데모 모드면 대본에서 건너뛰기
-    if (out?.done) return finish();
-    if (eng.current!.mode === 'live') eng.current!.next();
-    else if (eng.current!.skip()) return finish();
-    setPhase('talk');
-    showLine(eng.current!.line);
-    saveProgress();
-  }
-
-  function next() {
-    if (out?.done) return finish();
-    eng.current!.next();
-    setPhase('talk');
-    showLine(eng.current!.line);
-    saveProgress();
+    if (o.ok || o.advance) {
+      // 반응은 작은 말풍선으로 남기고, 다음 대사를 바로 보여 줘요
+      e.next();
+      const nl = e.line;
+      setReact({ text: o.reply, sub: o.replyLine.sub, mark: o.mark });
+      setLine(nl);
+      setLineMark(null);
+      setHintNudge(false);
+      setLog((g) => [...g, { who: 'char', text: nl.line }]);
+      play([o.replyLine, nl]);
+      saveProgress();
+    } else {
+      // 아쉬운 답: 캐릭터가 되묻는 말이 지금 대사가 돼요. 다시 시도를 강요하지 않고 그대로 이어서 답해요.
+      setReact(null);
+      setLine(o.replyLine);
+      setLineMark(o.mark);
+      setHintNudge(o.tries >= 2);
+      play([o.replyLine]);
+    }
+    setPhase((p) => (p === 'typing' ? 'typing' : 'talk'));
   }
 
   function saveProgress(status: 'playing' | 'paused' = 'playing') {
@@ -357,7 +360,7 @@ export default function SceneScreen() {
     try {
       setHint(await eng.current.hint(1));
     } catch {
-      setHintErr('힌트를 불러오지 못했어요.');
+      setHintErr(t('힌트를 불러오지 못했어요.'));
     }
   }
   async function revealThought() {
@@ -367,13 +370,15 @@ export default function SceneScreen() {
       setHint((o) => ({ clue: h.clue.length ? h.clue : (o?.clue ?? []), thought: h.thought, tip: h.tip }));
       setHintStep(2);
     } catch {
-      setHintErr('속마음을 불러오지 못했어요. 다시 눌러 주세요.');
+      setHintErr(t('속마음을 불러오지 못했어요. 다시 눌러 주세요.'));
     }
   }
 
   async function finish() {
+    if (finishing.current || !eng.current) return; // '결과 보기' 두 번 눌러도 한 번만
+    finishing.current = true;
     stopPlay();
-    const e = eng.current!;
+    const e = eng.current;
     let f;
     try {
       f = await e.final();
@@ -382,30 +387,27 @@ export default function SceneScreen() {
       f = { sessionId: null, passed: null, grade: null, score: null, best: '', worst: '', coins: 0, mistakes: 0, fixed: [], reach: null, infer: null, self: null, ending: null, nextSceneId: null };
     }
     // 오늘 첫 장면이면 연속 출석 +1, 보상 코인도 여기서 한 번만
-    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: e.title, goal: e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId });
+    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: scene.title || e.title, goal: scene.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId });
     router.replace('/result');
-  }
-
-  function restart() {
-    setFail(false);
-    setLog([]);
-    setOut(null);
-    setPhase('brief');
-    load();
   }
 
   const listening = phase === 'listening';
   const busy = phase === 'recognizing';
-  const showDock = (phase === 'talk' || listening || busy) && !judging && ready;
+  const showDock = (phase === 'talk' || listening || busy) && !judging && ready && !ended;
   const sec = Math.floor((recMode.current === 'rt' ? rtStat.ms : rec.ms) / 1000);
-  const scene = { no: E?.no ?? '', title: E?.title ?? '', situation: E?.brief.situation ?? '', goal: E?.brief.goal ?? '', partner: E?.brief.partner };
+  // 상황·목표: 서버 번역이 있으면 선택 언어로, 한국어 원문은 아래 작게
+  const trn = lang !== 'ko' ? E?.brief.translation : null;
+  const scene = { no: E?.no ?? '', title: trn?.title || E?.title || '', situation: trn?.situation || E?.brief.situation || '', goal: trn?.goal || E?.brief.goal || '', partner: trn?.partner || E?.brief.partner };
+  const orig = { situation: trn?.situation ? E?.brief.situation : undefined, goal: trn?.goal ? E?.brief.goal : undefined };
+  const openDetail = () => setDetail(true);
+  // 아쉬운 답 뒤 같은 대사에 머물러 있을 때만 '다시 말하기'
+  const onSameLine = !!out && !out.ok && !react && !ended;
 
   return (
     <ImageBackground source={E?.bg ? { uri: E.bg } : IMG.bg[place]} style={{ flex: 1, width: '100%', backgroundColor: C.bg }} imageStyle={{ width: '100%', height: '100%' }} resizeMode="cover">
       <View style={{ ...absFill, backgroundColor: TONE[place] }} />
-      {/* 캐릭터: 서버가 고른 표정 이미지가 있으면 그걸로 */}
       {/* 서버 표정 이미지는 흰 배경이 있어서, 배경 없는 앱 안 캐릭터 PNG를 써요 */}
-      <Image source={IMG.char[charId]} style={{ position: 'absolute', top: ins.top + 64, alignSelf: 'center', width: '62%', height: '72%' }} resizeMode="contain" accessibilityLabel={`${ch.name} 캐릭터`} />
+      <Image source={IMG.char[charId]} style={{ position: 'absolute', top: ins.top + 64, alignSelf: 'center', width: '62%', height: '72%' }} resizeMode="contain" accessibilityLabel={t('{name} 캐릭터', { name: t(ch.name) })} />
       {/* 아래로 갈수록 점점 흐려지는 그라데이션 (경계선 없이) */}
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}>
         {FADE.map((a, i) => (
@@ -416,38 +418,50 @@ export default function SceneScreen() {
       {/* 상단 단축바 */}
       <View style={{ position: 'absolute', top: ins.top + 8, left: 16, right: 16, flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', gap: 4, backgroundColor: C.white, borderRadius: 999, padding: 4 }}>
-          <IconBtn name="pause" size={36} bg={C.white} label="일시정지" onPress={() => setPause(true)} />
-          <IconBtn name="message-square" size={36} bg={C.white} label="대화 내역" onPress={() => setHistory(true)} />
+          <IconBtn name="pause" size={36} bg={C.white} label={t('일시정지')} onPress={() => setPause(true)} />
+          <IconBtn name="message-square" size={36} bg={C.white} label={t('대화 내역')} onPress={() => setHistory(true)} />
         </View>
         <View style={{ flex: 1 }} />
-        <Hearts n={hearts} max={E?.maxLives ?? 3} />
+        {/* 체력은 서버 장면에서만 (연습용 예시 대화는 체력으로 멈추지 않아요) */}
+        {E?.mode === 'live' ? <Hearts n={hearts} max={E?.maxLives ?? 3} /> : null}
       </View>
 
-      {/* 속마음 돋보기 */}
-      {phase !== 'brief' && ready ? (
-        <Pressable onPress={openHint} accessibilityRole="button" accessibilityLabel="속마음 보기" style={{ position: 'absolute', right: 24, top: ins.top + 200, alignItems: 'center', gap: 4 }}>
+      {/* 속마음 돋보기: 원할 때만. 아쉬운 답이 이어지면 살짝 강조만 해요 */}
+      {phase !== 'brief' && ready && !ended ? (
+        <Pressable onPress={openHint} accessibilityRole="button" accessibilityLabel={t('속마음 보기')} style={{ position: 'absolute', right: 24, top: ins.top + 200, alignItems: 'center', gap: 4 }}>
           <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', borderWidth: hintNudge ? 3 : 0, borderColor: C.lime }}>
             <Feather name="search" size={22} color={C.lime} />
           </View>
           <View style={{ backgroundColor: hintNudge ? C.lime : C.white, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
-            <T s="label" style={{ fontSize: 11 }}>속마음</T>
+            <T s="label" style={{ fontSize: 11 }}>{t('속마음')}</T>
           </View>
         </Pressable>
       ) : null}
 
       <KeyboardAvoidingView pointerEvents="box-none" behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end' }}>
         <View pointerEvents="box-none" style={{ paddingHorizontal: 16, paddingBottom: ins.bottom + 12, gap: 12 }}>
+          {/* 직전 반응: 작은 말풍선 + 판정 배지. 누르면 그때만 자세한 피드백 */}
+          {react && phase !== 'brief' ? (
+            <Pressable onPress={openDetail} accessibilityRole="button" accessibilityLabel={t('피드백 자세히: {label}', { label: out?.label ?? '' })} style={{ alignSelf: 'flex-start', maxWidth: '88%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 16, paddingVertical: 8, paddingLeft: 8, paddingRight: 12 }}>
+              <ReactionBadge mark={react.mark} size={26} />
+              <View style={{ flexShrink: 1 }}>
+                <T s="body" style={{ fontSize: 14 }} numberOfLines={2}>{react.text}</T>
+                {react.sub ? <T s="small" numberOfLines={1}>{react.sub}</T> : null}
+              </View>
+            </Pressable>
+          ) : null}
+
           {phase !== 'brief' ? (
             <LineCard
-              name={ch.name}
+              name={t(ch.name)}
               line={line.line}
               action={lineMark ? undefined : line.action}
               cues={lineMark ? undefined : line.cues}
               playing={playing}
               sub={line.sub}
-              onPlay={() => (playing ? stopPlay() : play(line, true))}
+              onPlay={() => (playing ? stopPlay() : play([line], true))}
               mark={lineMark}
-              onMarkPress={phase === 'reaction' ? openReason : undefined}
+              onMarkPress={lineMark ? openDetail : undefined}
             />
           ) : null}
 
@@ -455,15 +469,15 @@ export default function SceneScreen() {
           {judging ? (
             <View style={{ backgroundColor: C.white, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Dots />
-              <T s="label">{waitSec >= 5 ? '답변 확인 중… 조금 걸려요' : '답변 확인 중…'}</T>
+              <T s="label">{waitSec >= 5 ? t('답변 확인 중… 조금 걸려요') : t('답변 확인 중…')}</T>
             </View>
           ) : null}
           {sendErr && !judging ? (
             <View style={{ backgroundColor: C.white, borderRadius: 16, padding: 12, gap: 8 }}>
               <T s="label">{sendErr}</T>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Btn label="다시 보내기" small icon="rotate-cw" style={{ flex: 1 }} onPress={() => send(answer, phase === 'recognized')} />
-                <Btn label="고쳐서 말하기" small kind="line" style={{ flex: 1 }} onPress={() => { setSendErr(null); setText(answer); setPhase('typing'); }} />
+                <Btn label={t('다시 보내기')} small icon="rotate-cw" style={{ flex: 1 }} onPress={() => send(answer, phase === 'recognized')} />
+                <Btn label={t('고쳐서 말하기')} small kind="line" style={{ flex: 1 }} onPress={() => { setSendErr(null); setText(answer); setPhase('typing'); }} />
               </View>
             </View>
           ) : null}
@@ -473,97 +487,84 @@ export default function SceneScreen() {
             </View>
           ) : null}
 
-          {/* 방금 답의 피드백 한 줄: 대화를 막지 않아요. 누르면 자세히 */}
-          {out && !judging && !sendErr && phase !== 'brief' ? (
-            <Pressable onPress={() => setDetail(true)} accessibilityRole="button" accessibilityLabel={`피드백 자세히: ${out.label}`} style={{ backgroundColor: C.white, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <ReactionBadge mark={out.mark} size={24} />
-              <View style={{ flex: 1 }}>
-                <T s="label" numberOfLines={1}>{out.native ? '한국어로 다시 말해 보세요' : out.label}</T>
-                {(out.ok ? out.tip : out.native ? out.better : out.why) ? <T s="small" numberOfLines={1}>{out.ok ? out.tip : out.native ? `"${out.better}"` : out.why}</T> : null}
-              </View>
-              {out.done && movesOn(out) ? (
-                <Btn label="결과 보기" small icon="arrow-right" onPress={finish} />
-              ) : (
-                <T s="small" style={{ color: C.ink, fontFamily: F.b }}>자세히</T>
-              )}
-            </Pressable>
-          ) : null}
+          {/* 마지막 대사까지 끝: 전체 평가는 결과 화면에서 */}
+          {ended && !judging ? <Btn label={t('결과 보기')} icon="arrow-right" onPress={finish} /> : null}
 
           {/* 듣는 중 / 인식 중 */}
           {listening ? (
             <View style={{ backgroundColor: C.lime, borderRadius: 20, borderWidth: 2, borderColor: C.ink, padding: 14, alignItems: 'center', gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.red }} />
-                <T s="label">듣는 중… 0:{String(sec).padStart(2, '0')}</T>
+                <T s="label">{t('듣는 중…')} 0:{String(sec).padStart(2, '0')}</T>
                 <Wave level={recMode.current === 'rt' ? rtStat.level : rec.level} />
               </View>
-              {preview ? <T s="body" style={{ textAlign: 'center' }} numberOfLines={3}>{preview}</T> : <T s="small" style={{ color: C.ink }}>듣는 중…</T>}
+              {preview ? <T s="body" style={{ textAlign: 'center' }} numberOfLines={3}>{preview}</T> : <T s="small" style={{ color: C.ink }}>{t('듣는 중…')}</T>}
             </View>
           ) : null}
           {busy ? (
             <View style={{ backgroundColor: C.white, borderRadius: 20, borderWidth: 2, borderColor: C.ink, padding: 16, alignItems: 'center', gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <T s="label">글자로 바꾸는 중…</T>
+                <T s="label">{t('글자로 바꾸는 중…')}</T>
                 <Dots />
               </View>
             </View>
           ) : null}
 
           {/* 인식 완료 */}
-          {phase === 'recognized' && !judging ? (
+          {phase === 'recognized' && !judging && !ended ? (
             <View style={{ backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Feather name="check-circle" size={16} color={C.ink} />
-                <T s="label">이렇게 들었어요</T>
+                <T s="label">{t('이렇게 들었어요')}</T>
               </View>
               {editHeard ? (
                 <TextInput value={heard} onChangeText={setHeard} autoFocus multiline style={{ fontFamily: F.m, fontSize: 16, color: C.ink, borderWidth: 1.5, borderColor: C.ink, borderRadius: 12, padding: 10 }} />
               ) : (
                 <Pressable onPress={() => setEditHeard(true)}>
                   <T s="h3" style={{ fontSize: 16 }}>"{heard}"</T>
-                  <T s="small" style={{ marginTop: 4 }}>틀렸다면 눌러서 직접 고치기</T>
+                  <T s="small" style={{ marginTop: 4 }}>{t('틀렸다면 눌러서 직접 고치기')}</T>
                 </Pressable>
               )}
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Btn label="다시 말하기" kind="line" small style={{ flex: 1 }} onPress={() => setPhase('talk')} />
-                <Btn label={judging ? '답변 확인 중…' : '이 답변 보내기'} kind="dark" small icon="send" style={{ flex: 1.3 }} disabled={judging} onPress={() => send(heard, true)} />
+                <Btn label={t('다시 말하기')} kind="line" small style={{ flex: 1 }} onPress={() => setPhase('talk')} />
+                <Btn label={t('이 답변 보내기')} kind="dark" small icon="send" style={{ flex: 1.3 }} disabled={judging} onPress={() => send(heard, true)} />
               </View>
             </View>
           ) : null}
 
-          {/* 직접 입력 */}
-          {phase === 'typing' && !judging ? (
+          {/* 직접 입력: 캐릭터 음성이 나오는 중에도 쓸 수 있어요 */}
+          {phase === 'typing' && !judging && !ended ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, borderRadius: 28, borderWidth: 1.5, borderColor: C.ink, paddingLeft: 18, paddingRight: 6, minHeight: 56 }}>
               <TextInput
                 value={text}
                 onChangeText={setText}
                 autoFocus
-                placeholder="직접 입력하기…"
+                placeholder={t('직접 입력하기…')}
                 placeholderTextColor={C.sub}
                 onSubmitEditing={() => send(text)}
                 returnKeyType="send"
                 style={{ flex: 1, minWidth: 0, width: 0, fontFamily: F.r, fontSize: 15, color: C.ink, paddingVertical: 12, outlineStyle: 'none' } as any}
               />
-              <IconBtn name="mic" size={40} bg={C.bg} label="음성으로 말하기" onPress={() => setPhase('talk')} />
+              <IconBtn name="mic" size={40} bg={C.bg} label={t('음성으로 말하기')} onPress={() => setPhase('talk')} />
               <View style={{ width: 6 }} />
-              <IconBtn name="send" size={40} bg={text.trim() ? C.lime : C.bg} label="보내기" onPress={() => send(text)} />
+              <IconBtn name="send" size={40} bg={text.trim() ? C.lime : C.bg} label={t('보내기')} onPress={() => send(text)} />
             </View>
           ) : null}
 
           {/* 입력 도크: 텍스트 입력 / 음성 */}
           {showDock ? (
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 44, marginTop: 4 }}>
-              <Pressable disabled={busy} onPress={() => { setNotice(null); setPhase('typing'); }} accessibilityRole="button" accessibilityLabel="텍스트로 입력" style={{ alignItems: 'center', gap: 6, opacity: busy ? 0.4 : 1 }}>
+              <Pressable disabled={busy} onPress={() => { setNotice(null); setPhase('typing'); }} accessibilityRole="button" accessibilityLabel={t('텍스트로 입력')} style={{ alignItems: 'center', gap: 6, opacity: busy ? 0.4 : 1 }}>
                 <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="keypad-outline" size={22} color={C.ink} />
                 </View>
-                <T s="small" style={{ color: C.ink }}>텍스트 입력</T>
+                <T s="small" style={{ color: C.ink }}>{t('텍스트 입력')}</T>
               </Pressable>
-              <Pressable disabled={busy} onPressIn={micDown} onPressOut={micUp} accessibilityRole="button" accessibilityLabel={listening ? '말하기 끝내기' : '말하기 시작'} style={{ alignItems: 'center', gap: 6 }}>
+              <Pressable disabled={busy} onPressIn={micDown} onPressOut={micUp} accessibilityRole="button" accessibilityLabel={listening ? t('말하기 끝내기') : t('말하기 시작')} style={{ alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: busy ? C.line : listening ? C.lime : C.ink, borderWidth: listening ? 3 : 0, borderColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
                   {listening ? <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: C.ink }} /> : <Feather name="mic" size={28} color={busy ? C.sub : C.lime} />}
                 </View>
-                <T s="small" style={{ color: C.ink }}>{busy ? '글자로 바꾸는 중…' : listening ? '듣는 중…' : '눌러서 말하기'}</T>
+                <T s="small" style={{ color: C.ink }}>{busy ? t('글자로 바꾸는 중…') : listening ? t('듣는 중…') : t('눌러서 말하기')}</T>
               </Pressable>
               <View style={{ width: 52 }} />
             </View>
@@ -577,118 +578,103 @@ export default function SceneScreen() {
           <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 22, gap: 14 }}>
             {loadErr ? (
               <>
-                <T s="h2">장면을 열지 못했어요</T>
+                <T s="h2">{t('장면을 열지 못했어요')}</T>
                 <T s="sub">{loadErr}</T>
-                <Btn label="다시 시도" icon="rotate-cw" onPress={() => { load(); }} />
-                {!st.demo ? <Btn label="예시 대화로 해 보기" kind="line" onPress={() => { st.setDemo(true); router.replace({ pathname: '/scene/[id]', params: { id: 'today' } }); }} /> : null}
-                <Btn label="홈으로" kind="ghost" onPress={() => router.replace('/home')} />
+                <Btn label={t('다시 시도')} icon="rotate-cw" onPress={() => { load(); }} />
+                {!st.demo ? <Btn label={t('예시 대화로 해 보기')} kind="line" onPress={() => { st.setDemo(true); router.replace({ pathname: '/scene/[id]', params: { id: 'today' } }); }} /> : null}
+                <Btn label={t('홈으로')} kind="ghost" onPress={() => router.replace('/home')} />
               </>
             ) : !ready ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
                 <Dots />
-                <T s="label">장면을 준비하고 있어요</T>
+                <T s="label">{t('장면을 준비하고 있어요')}</T>
               </View>
             ) : (
               <>
-                <Tag label={[scene.no, scene.title].filter(Boolean).join(' · ') || '오늘의 장면'} tone="lime" />
-                <Brief k="상대" v={scene.partner || `${ch.call} · ${persona.name} · ${persona.short}`} />
-                <Brief k="상황" v={scene.situation} sub={E?.brief.translation?.situation} />
-                <Brief k="이번 목표" v={scene.goal} sub={E?.brief.translation?.goal} />
-                {st.demo ? <T s="small">체험 중</T> : null}
-                <Btn label="대화 시작" icon="play" onPress={begin} />
+                <Tag label={[scene.no, scene.title].filter(Boolean).join(' · ') || t('오늘의 장면')} tone="lime" />
+                <Brief k={t('상대')} v={scene.partner || `${t(ch.call)} · ${t(persona.name)} · ${t(persona.short)}`} />
+                <Brief k={t('상황')} v={scene.situation} sub={orig.situation} />
+                <Brief k={t('이번 목표')} v={scene.goal} sub={orig.goal} />
+                {st.demo ? <T s="small">{t('체험 중')}</T> : null}
+                <Btn label={t('대화 시작')} icon="play" onPress={begin} />
               </>
             )}
           </View>
         </View>
       ) : null}
 
-      {/* 말실수: △ / X / 모국어 */}
-      <Sheet visible={detail && !!out && !out.ok} onClose={() => setDetail(false)}>
+      {/* 피드백 자세히: 배지를 눌렀을 때만. 닫아도 대화는 그대로 */}
+      <Sheet visible={detail && !!out && !views} onClose={() => setDetail(false)}>
         {out ? (
           <View style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <ReactionBadge mark={out.mark} size={28} />
-              <T s="label">{out.label}</T>
+              <T s="label" style={{ flex: 1 }}>{out.label}</T>
+              {out.first ? <Tag label={t('수정 완료')} tone="lime" /> : null}
             </View>
-            <T s="h2">{out.native ? '한국어로는 이렇게 말해요' : out.mark === '?' ? '못 알아들었대요' : out.mark === '△' ? `${ch.name}${josa(ch.name)} 고개를 갸웃해요` : `${ch.name} 표정이 굳었어요`}</T>
-            <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
-              <T s="small">내 답</T>
-              <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
-            </View>
-            {!out.native && out.why ? (
-              <>
-                <T s="label">이유</T>
-                <T s="sub">{out.why}</T>
-                {out.whySub ? <T s="small">{out.whySub}</T> : null}
-              </>
-            ) : null}
-            {out.better ? (
-              <View style={{ borderLeftWidth: 3, borderLeftColor: C.lime, paddingLeft: 10 }}>
-                <T s="small">{out.native ? '따라 말해 보세요' : '이렇게 말하면 좋아요'}</T>
-                <T s="body" style={{ marginTop: 2 }}>"{out.better}"</T>
-              </View>
-            ) : null}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-              {out.mark === '△' && !out.native && E?.canSkip && !out.advance ? <Btn label="다음 대화" kind="line" style={{ flex: 1 }} onPress={() => { setDetail(false); cont(); }} /> : null}
-              <Btn label={out.native ? '한국어로 다시 말하기' : '다시 말하기'} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={() => { setDetail(false); if (phase === 'reaction') retry(); }} />
-            </View>
-            {out.mark === 'X' && out.tries >= 3 && E?.canSkip ? (
-              <Pressable onPress={() => { setDetail(false); cont(); }} style={{ alignSelf: 'center', padding: 6 }}>
-                <T s="label" style={{ textDecorationLine: 'underline', color: C.sub }}>예시 보고 넘어가기</T>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-      </Sheet>
-
-      {/* 턴 피드백 (O) */}
-      <Sheet visible={detail && !!out?.ok && !views} onClose={() => setDetail(false)}>
-        {out ? (
-          <View style={{ gap: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <ReactionBadge mark="O" size={28} />
-              <T s="label">{out.label}</T>
-              {out.first ? <Tag label="수정 완료" tone="lime" /> : null}
-            </View>
-            <T s="h3">의도 전달 성공 · {ch.name} 표정이 누그러졌어요</T>
             {out.first ? (
               <View style={{ gap: 6 }}>
                 <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
-                  <T s="small">처음 답</T>
+                  <T s="small">{t('처음 답')}</T>
                   <T s="body" style={{ marginTop: 2, color: C.sub, textDecorationLine: 'line-through' }}>"{out.first}"</T>
                 </View>
                 <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12, borderLeftWidth: 3, borderLeftColor: C.lime }}>
-                  <T s="small">고친 답</T>
+                  <T s="small">{t('고친 답')}</T>
                   <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
                 </View>
               </View>
             ) : (
-              <T s="sub">"{answer}"</T>
+              <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
+                <T s="small">{t('내 답')}</T>
+                <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
+              </View>
             )}
-            {/* 속도·망설임·말끝은 음성으로 답했을 때만 (텍스트 답엔 숨김) */}
-            {out.tone || out.voice ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {out.tone ? <Stat k="톤" v={out.tone} /> : null}
-                {out.voice && out.speed ? <Stat k="속도" v={out.speed} /> : null}
-                {out.voice && out.hesitation ? <Stat k="망설임" v={out.hesitation} /> : null}
-                {out.voice && out.ending ? <Stat k="말끝" v={out.ending} /> : null}
+            {!out.ok && !out.native && out.why ? (
+              <View style={{ gap: 2 }}>
+                <T s="label">{t('이유')}</T>
+                <T s="sub">{lang !== 'ko' && out.whySub ? out.whySub : out.why}</T>
+                {lang !== 'ko' && out.whySub && out.whySub !== out.why ? <T s="small">{out.why}</T> : null}
               </View>
             ) : null}
-            {out.tip ? (
+            {!out.ok && out.better ? (
+              <View style={{ borderLeftWidth: 3, borderLeftColor: C.lime, paddingLeft: 10 }}>
+                <T s="small">{out.native ? t('따라 말해 보세요') : t('예시 답변')}</T>
+                <T s="body" style={{ marginTop: 2 }}>"{out.better}"</T>
+              </View>
+            ) : null}
+            {/* 속도·망설임·말끝은 음성으로 답했을 때만 (텍스트 답엔 숨김) */}
+            {out.ok && (out.tone || out.voice) ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {out.tone ? <Stat k={t('톤')} v={out.tone} /> : null}
+                {out.voice && out.speed ? <Stat k={t('속도')} v={out.speed} /> : null}
+                {out.voice && out.hesitation ? <Stat k={t('망설임')} v={out.hesitation} /> : null}
+                {out.voice && out.ending ? <Stat k={t('말끝')} v={out.ending} /> : null}
+              </View>
+            ) : null}
+            {out.ok && out.tip ? (
               <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
                 <Feather name="zap" size={16} color={C.ink} style={{ marginTop: 2 }} />
                 <T s="sub" style={{ flex: 1, color: C.ink }}>{out.tip}</T>
               </View>
             ) : null}
-            {out.views.length ? (
+            {out.ok && out.views.length ? (
               <Pressable onPress={() => setViews(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: C.ink, borderRadius: 14, padding: 12 }}>
                 <Feather name="users" size={16} />
-                <T s="label" style={{ flex: 1 }}>다른 사람이 이 말을 하면?</T>
+                <T s="label" style={{ flex: 1 }}>{t('다른 사람이 이 말을 하면?')}</T>
                 <Feather name="chevron-right" size={18} />
               </Pressable>
             ) : null}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-              {out.done ? <Btn label="결과 보기" icon="arrow-right" style={{ flex: 1 }} onPress={() => { setDetail(false); finish(); }} /> : <Btn label="닫고 이어서 말하기" icon="mic" style={{ flex: 1 }} onPress={() => setDetail(false)} />}
+              {ended ? (
+                <Btn label={t('결과 보기')} icon="arrow-right" style={{ flex: 1 }} onPress={() => { setDetail(false); finish(); }} />
+              ) : onSameLine ? (
+                <>
+                  <Btn label={t('닫기')} kind="line" style={{ flex: 1 }} onPress={() => setDetail(false)} />
+                  <Btn label={out.native ? t('한국어로 다시 말하기') : t('다시 말하기')} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={() => { setDetail(false); setPhase('talk'); }} />
+                </>
+              ) : (
+                <Btn label={t('닫고 이어서 말하기')} icon="mic" style={{ flex: 1 }} onPress={() => setDetail(false)} />
+              )}
             </View>
           </View>
         ) : null}
@@ -699,10 +685,10 @@ export default function SceneScreen() {
         <View style={{ gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Feather name="users" size={18} />
-            <T s="h3">다른 사람이 이 말을 하면?</T>
+            <T s="h3">{t('다른 사람이 이 말을 하면?')}</T>
           </View>
           <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
-            <T s="small">내가 한 말</T>
+            <T s="small">{t('내가 한 말')}</T>
             <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
           </View>
           {out?.views.map((v, i) => (
@@ -715,7 +701,7 @@ export default function SceneScreen() {
               </View>
             </View>
           ))}
-          <Btn label="돌아가기" kind="line" onPress={() => setViews(false)} />
+          <Btn label={t('돌아가기')} kind="line" onPress={() => setViews(false)} />
         </View>
       </Sheet>
 
@@ -724,26 +710,26 @@ export default function SceneScreen() {
         <View style={{ gap: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Feather name="search" size={18} />
-            <T s="h3">{ch.name}의 속마음</T>
+            <T s="h3">{t('{name}의 속마음', { name: t(ch.name) })}</T>
             <View style={{ flex: 1 }} />
-            <Tag label={`${hintStep}/2 단계`} tone={hintStep === 2 ? 'lime' : 'grey'} />
+            <Tag label={t('{n}/2 단계', { n: hintStep })} tone={hintStep === 2 ? 'lime' : 'grey'} />
           </View>
-          <T s="label">1단계 · 단서부터 읽어 봐요</T>
+          <T s="label">{t('1단계 · 단서부터 읽어 봐요')}</T>
           {/* 시트에 가려진 대사를 한 줄 다시 보여 줘요 */}
-          {line.line ? <T s="sub" numberOfLines={2}>{ch.name}: "{line.line}"</T> : null}
+          {line.line ? <T s="sub" numberOfLines={2}>{t(ch.name)}: "{line.line}"</T> : null}
           {hintErr ? <T s="label">{hintErr}</T> : null}
           <View style={{ backgroundColor: C.bg, borderRadius: 18, padding: 14, gap: 8 }}>
             {!hint?.clue.length && !hintErr ? <Dots /> : null}
             {hint?.clue.map((c, i) => (
               <View key={i} style={{ flexDirection: 'row', gap: 8 }}>
-                <T s="small" style={{ width: 64 }}>{c.k}</T>
+                <T s="small" style={{ width: 72 }}>{c.k}</T>
                 <T s="body" style={{ flex: 1, fontSize: 14 }}>{c.v}</T>
               </View>
             ))}
           </View>
           {hintStep === 2 ? (
             <>
-              <T s="label">2단계 · 진짜 속마음</T>
+              <T s="label">{t('2단계 · 진짜 속마음')}</T>
               <View style={{ backgroundColor: C.bg, borderRadius: 18, padding: 16, borderLeftWidth: 4, borderLeftColor: C.lime }}>
                 <T s="body" style={{ fontFamily: F.m }}>{hint?.thought}</T>
               </View>
@@ -753,12 +739,12 @@ export default function SceneScreen() {
                   <T s="body" style={{ flex: 1 }}>{hint.tip}</T>
                 </View>
               ) : null}
-              <Btn label="돌아가서 말하기" icon="mic" onPress={() => { setHint(null); setPhase('talk'); }} />
+              <Btn label={t('돌아가서 말하기')} icon="mic" onPress={() => setHint(null)} />
             </>
           ) : (
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Btn label="추측해서 말하기" kind="line" style={{ flex: 1 }} onPress={() => { setHint(null); setPhase('talk'); }} />
-              <Btn label="속마음 보기" icon="eye" style={{ flex: 1.3 }} onPress={revealThought} />
+              <Btn label={t('추측해서 말하기')} kind="line" style={{ flex: 1 }} onPress={() => setHint(null)} />
+              <Btn label={t('속마음 보기')} icon="eye" style={{ flex: 1.3 }} onPress={revealThought} />
             </View>
           )}
         </View>
@@ -769,56 +755,26 @@ export default function SceneScreen() {
         <View style={{ ...FRAME, backgroundColor: C.dim, justifyContent: 'center', padding: 24 }}>
           <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 24, gap: 10, width: '100%', maxWidth: 382, alignSelf: 'center' }}>
             <IconBtn name="pause" bg={C.lime} />
-            <T s="h2">잠깐 멈췄어요</T>
-            <T s="sub">지금 나가도 여기까지 저장돼요.{'\n'}다음에 이어서 할 수 있어요.</T>
-            <Btn label="계속하기" icon="play" onPress={() => setPause(false)} style={{ marginTop: 8 }} />
-            <Btn label="설정" kind="ghost" onPress={() => { setPause(false); router.push('/settings'); }} />
-            <Btn label="나가기" kind="line" onPress={() => { setPause(false); stopSpeak(); eng.current?.pause(); saveProgress('paused'); router.replace('/home'); }} />
-          </View>
-        </View>
-      </Modal>
-
-      {/* 장면 실패 */}
-      <Modal visible={fail} transparent animationType="fade">
-        <View style={{ ...FRAME, backgroundColor: C.dim, justifyContent: 'center', padding: 24 }}>
-          <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 24, gap: 10, width: '100%', maxWidth: 382, alignSelf: 'center' }}>
-            <Ionicons name="heart-dislike" size={36} color={C.red} />
-            <T s="h2">체력이 다 떨어졌어요</T>
-            <T s="sub">이번엔 {ch.call}을 설득하지 못했어요.{'\n'}괜찮아요, 실수는 연습이니까요.</T>
-            {out?.tip ? (
-              <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
-                <T s="body">{out.tip}</T>
-              </View>
-            ) : null}
-            <Btn label="힌트 보고 다시 하기" icon="search" onPress={() => { setFail(false); restart(); }} />
-            <Btn label="처음부터 다시" kind="line" onPress={restart} />
-            <Btn label="결말 보기" kind="ghost" small onPress={() => { setFail(false); finish(); }} />
-            {E?.mode === 'mock' ? (
-            <Pressable
-              onPress={() => {
-                if (st.coins >= 50) { st.addCoins(-50); if (eng.current) eng.current.lives = eng.current.maxLives; setHearts(eng.current?.maxLives ?? 3); setFail(false); retry(); }
-              }}
-              style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 4 }}
-            >
-              <T s="small">체력은 30분마다 1개씩 차요 ·</T>
-              <T s="label" style={{ textDecorationLine: 'underline' }}>50 코인으로 채우기</T>
-            </Pressable>
-            ) : null}
+            <T s="h2">{t('잠깐 멈췄어요')}</T>
+            <T s="sub">{t('지금 나가도 여기까지 저장돼요.\n다음에 이어서 할 수 있어요.')}</T>
+            <Btn label={t('계속하기')} icon="play" onPress={() => setPause(false)} style={{ marginTop: 8 }} />
+            <Btn label={t('설정')} kind="ghost" onPress={() => { setPause(false); router.push('/settings'); }} />
+            <Btn label={t('나가기')} kind="line" onPress={() => { setPause(false); stopSpeak(); eng.current?.pause(); saveProgress('paused'); router.replace('/home'); }} />
           </View>
         </View>
       </Modal>
 
       {/* 대화 내역 */}
       <Sheet visible={history} onClose={() => setHistory(false)}>
-        <T s="h2">대화 내역</T>
-        <T s="small" style={{ marginBottom: 12 }}>{[scene.no, scene.title, ch.name].filter(Boolean).join(' · ')}</T>
+        <T s="h2">{t('대화 내역')}</T>
+        <T s="small" style={{ marginBottom: 12 }}>{[scene.no, scene.title, t(ch.name)].filter(Boolean).join(' · ')}</T>
         <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 10 }}>
           {log.map((m, i) => (
             <View key={i} style={{ alignSelf: m.who === 'me' ? 'flex-end' : 'flex-start', maxWidth: '82%' }}>
               <View style={{ backgroundColor: m.who === 'me' ? C.ink : C.bg, borderRadius: 16, padding: 12, paddingRight: m.mark ? 22 : 12 }}>
                 <T style={{ color: m.who === 'me' ? C.white : C.ink }}>{m.text}</T>
               </View>
-              {/* F안: 반응 말풍선마다 배지가 남아서 어디서 실수했는지 보여요 */}
+              {/* 반응 말풍선마다 배지가 남아서 어디서 실수했는지 보여요 */}
               {m.mark ? (
                 <View style={{ position: 'absolute', top: -8, right: -8 }}>
                   <ReactionBadge mark={m.mark} size={24} />
@@ -826,7 +782,7 @@ export default function SceneScreen() {
               ) : null}
             </View>
           ))}
-          {!log.length ? <T s="sub">아직 주고받은 말이 없어요.</T> : null}
+          {!log.length ? <T s="sub">{t('아직 주고받은 말이 없어요.')}</T> : null}
         </ScrollView>
       </Sheet>
     </ImageBackground>
@@ -844,8 +800,6 @@ function Brief({ k, v, sub }: { k: string; v: string; sub?: string }) {
     </View>
   );
 }
-
-const josa = (w: string) => ((w.charCodeAt(w.length - 1) - 0xac00) % 28 ? '이' : '가');
 
 // 0 → 0.85 로 부드럽게 (위는 투명, 맨 아래는 거의 불투명)
 const FADE = Array.from({ length: 32 }, (_, i) => +(0.85 * Math.pow((i + 1) / 32, 1.6)).toFixed(3));

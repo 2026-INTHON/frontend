@@ -9,6 +9,7 @@ export type Verdict = {
   tone: string;
   speed: string;
   hesitation: string;
+  hesitationCount: number;
   ending: string;
   tip: string;
 };
@@ -33,6 +34,7 @@ export function judge(turn: Turn, answer: string, pack: 'ko' | 'en' = 'ko'): Ver
     tone: mark === 'O' ? '공손하고 솔직해요' : mark === '△' ? '뜻이 조금 흐려요' : '변명처럼 들려요',
     speed: '적당해요',
     hesitation: hes ? `"음…" ${hes}번` : '없어요',
+    hesitationCount: hes,
     ending: /[?.요다]$/.test(a) ? '또렷하게 끝냈어요' : '말끝이 흐려요',
     tip: mark === 'O' ? '"내일 오전 10시"처럼 시간을 콕 집으면 더 믿음직해요.' : turn.tip,
   };

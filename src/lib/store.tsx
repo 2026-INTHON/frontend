@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CharId, PersonaId } from './data';
 import type { Ending } from './engine';
+import { normLang } from './i18n';
 
 // 앱 상태. 기기에 저장해서 새로고침·재실행해도 이어져요 (웹은 localStorage, 앱은 AsyncStorage).
 // 서버에 연결되면 기록·코인은 서버 값(/home, /records, /wallet, /mistakes)이 우선이에요.
@@ -144,7 +145,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((raw) => {
-        if (raw) setS({ ...initial, ...JSON.parse(raw) });
+        if (!raw) return;
+        const saved = { ...initial, ...JSON.parse(raw) } as State;
+        // 표시 언어는 지원하는 언어로만 (학습 기록은 그대로)
+        setS({ ...saved, lang: normLang(saved.lang, saved.pack) });
       })
       .catch(() => null)
       .finally(() => setHydrated(true));
