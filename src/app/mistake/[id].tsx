@@ -4,15 +4,24 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Btn, Card, Screen, T, Tag, TopBar } from '../../components/ui';
 import { C } from '../../lib/theme';
 import { speak } from '../../lib/voice';
-import { SCENES } from '../../lib/data';
 import { useStore } from '../../lib/store';
 
 // 18 오답 상세
 export default function MistakeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { mistakes } = useStore();
-  const m = mistakes.find((x) => x.id === id) ?? mistakes[0];
-  const scene = SCENES.find((s) => s.title === m.title);
+  const m = mistakes.find((x) => x.id === id);
+  if (!m) {
+    return (
+      <Screen>
+        <TopBar title="오답 상세" />
+        <View style={{ padding: 24, gap: 12 }}>
+          <T s="sub">이 말실수를 찾지 못했어요.</T>
+          <Btn label="오답 도감으로" onPress={() => router.replace('/mistakes')} />
+        </View>
+      </Screen>
+    );
+  }
   return (
     <Screen>
       <TopBar title="오답 상세" />
@@ -43,7 +52,7 @@ export default function MistakeDetail() {
         {m.fixed ? <Tag label="고침" tone="lime" /> : null}
       </ScrollView>
       <View style={{ paddingHorizontal: 16 }}>
-        <Btn label="이 부분만 다시 연습" icon="rotate-ccw" onPress={() => router.push({ pathname: '/scene/[id]', params: { id: scene?.id ?? 'boss-report' } })} />
+        <Btn label="이 부분만 다시 연습" icon="rotate-ccw" onPress={() => router.push({ pathname: '/scene/[id]', params: { id: m.scene || 'today' } })} />
       </View>
     </Screen>
   );

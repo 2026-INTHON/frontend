@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Btn, Card, Chip, Screen, T, Tag, TopBar } from '../../components/ui';
 import { C } from '../../lib/theme';
-import { IMG, PERSONAS, PersonaId, charById, sceneForChar } from '../../lib/data';
+import { IMG, PERSONAS, PersonaId, charById } from '../../lib/data';
 import { useStore } from '../../lib/store';
 import * as haptic from '../../lib/haptics';
 
@@ -127,7 +127,7 @@ export default function PersonaPick() {
           icon="arrow-right"
           onPress={() => {
             set({ persona: sel, onboarded: true });
-            router.replace({ pathname: '/scene/[id]', params: { id: sceneForChar(char).id } });
+            router.replace({ pathname: '/scene/[id]', params: { id: 'today' } });
           }}
         />
       </View>
