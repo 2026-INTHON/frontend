@@ -14,9 +14,3 @@ export function stopSpeak() {
     Speech.stop();
   } catch {}
 }
-
-// 녹음 파일을 글자로 바꾸기. 지금은 데모 문장을 돌려주고, 나중에 gpt-transcribe API로 교체.
-export async function transcribe(_uri: string | null, fallback: string): Promise<string> {
-  await new Promise((r) => setTimeout(r, 1400));
-  return fallback;
-}

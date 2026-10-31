@@ -64,18 +64,58 @@ export function Cues({ cues }: { cues?: { k: string; v: string }[] }) {
   );
 }
 
-export function LineCard({ name, line, action, cues, playing, onPlay, sec = 3 }: { name: string; line: string; action?: string; cues?: { k: string; v: string }[]; playing?: boolean; onPlay?: () => void; sec?: number }) {
+// F안 · 반응 말풍선 배지: O 통했어(라임 과녁) / △ 더 말해 줘(흰 원 세모) / X 말실수(빨강) / ? 다시 말해 줘
+export type MarkKind = 'O' | '△' | 'X' | '?';
+const MARK_NAME: Record<MarkKind, string> = { O: '통했어', '△': '더 말해 줘', X: '말실수', '?': '다시 말해 줘' };
+export function ReactionBadge({ mark, size = 34, onPress }: { mark: MarkKind; size?: number; onPress?: () => void }) {
+  const bg = mark === 'O' ? C.lime : mark === 'X' ? C.red : C.white;
+  const s = size;
+  const body = (
+    <View style={{ width: s, height: s, borderRadius: s / 2, backgroundColor: bg, borderWidth: mark === 'X' ? 0 : 2, borderColor: C.ink, alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.18)' } as any}>
+      {mark === 'O' ? (
+        <View style={{ width: s * 0.42, height: s * 0.42, borderRadius: s, borderWidth: Math.max(2, s * 0.09), borderColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: s * 0.1, height: s * 0.1, borderRadius: s, backgroundColor: C.ink }} />
+        </View>
+      ) : mark === '△' ? (
+        <Feather name="triangle" size={s * 0.48} color={C.ink} />
+      ) : mark === 'X' ? (
+        <Feather name="x" size={s * 0.62} color={C.white} />
+      ) : (
+        <T style={{ fontFamily: F.k, fontSize: s * 0.5, lineHeight: s * 0.62, color: C.ink }}>?</T>
+      )}
+    </View>
+  );
+  const label = `${mark === 'O' ? 'O' : mark === '△' ? '세모' : mark === 'X' ? 'X' : '물음표'} · ${MARK_NAME[mark]}`;
+  return onPress ? (
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${label}, 이유 보기`}>
+      {body}
+    </Pressable>
+  ) : (
+    <View accessible accessibilityLabel={label}>{body}</View>
+  );
+}
+export const markName = (m: MarkKind) => MARK_NAME[m];
+
+export function LineCard({ name, line, sub, action, cues, playing, onPlay, sec = 3, mark, onMarkPress }: { name: string; line: string; sub?: string | null; action?: string; cues?: { k: string; v: string }[]; playing?: boolean; onPlay?: () => void; sec?: number; mark?: MarkKind | null; onMarkPress?: () => void }) {
   return (
     <View>
+      {/* 반응 배지: 말풍선 오른쪽 위 모서리 */}
+      {mark ? (
+        <View style={{ position: 'absolute', top: -14, right: -6, zIndex: 3 }}>
+          <ReactionBadge mark={mark} onPress={onMarkPress} />
+        </View>
+      ) : null}
       <View style={{ position: 'absolute', top: -12, left: 16, zIndex: 2, backgroundColor: C.ink, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
         <T style={{ color: C.white, fontFamily: F.b, fontSize: 12 }}>{name}</T>
       </View>
       <View style={{ backgroundColor: C.white, borderRadius: 20, borderWidth: 2, borderColor: C.ink, padding: 20, paddingTop: 22 }}>
         <T s="h2" style={{ fontSize: 19 }}>{line}</T>
+        {/* 선택 언어 자막 */}
+        {sub ? <T s="sub" style={{ marginTop: 4, color: C.ink }}>{sub}</T> : null}
         {action ? <T s="sub" style={{ marginTop: 6 }}>{action}</T> : null}
         <Cues cues={cues} />
         {onPlay ? (
-          <Pressable onPress={onPlay} style={{ marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6 }}>
+          <Pressable onPress={onPlay} accessibilityRole="button" accessibilityLabel={playing ? '대사 멈추기' : '대사 다시 듣기'} style={{ marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
               <Feather name={playing ? 'pause' : 'play'} size={12} color={C.white} />
             </View>
