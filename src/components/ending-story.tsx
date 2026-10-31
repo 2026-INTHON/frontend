@@ -7,6 +7,7 @@ import { CHARACTERS, CharId, IMG } from '../lib/data';
 import type { Ending } from '../lib/engine';
 import { speak, stopSpeak } from '../lib/voice';
 import { C, F } from '../lib/theme';
+import { useStore } from '../lib/store';
 import { Card, T, Tag } from './ui';
 
 // 엔딩 (FE_MIGRATION_V2): 마지막 반응 대사(표정·자막·음성) → 정리 카드
@@ -15,6 +16,7 @@ import { Card, T, Tag } from './ui';
 export function EndingDialogue({ ending, char, sessionId, pack }: { ending: Ending; char: CharId; sessionId?: string | null; pack: 'ko' | 'en' }) {
   const ch = CHARACTERS.find((c) => c.id === char) ?? CHARACTERS[0];
   const d = ending.dialogue;
+  const { persona } = useStore();
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
   const player = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
   const audio = useRef<string | null>(d?.audio ?? null);
@@ -62,9 +64,8 @@ export function EndingDialogue({ ending, char, sessionId, pack }: { ending: Endi
       }
       return;
     }
-    // 데모: 기기 음성
     setState('playing');
-    speak(d.text, { lang: pack === 'ko' ? 'ko-KR' : 'en-US', onDone: () => setState('idle') });
+    await speak(d.text, {char,persona,emotion:ending.emotion,lang:pack==='ko'?'ko-KR':'en-US',onDone:()=>setState('idle'),onError:()=>setState('error')});
   }
 
   // 표정: 서버가 고른 이미지(배경 있음)는 둥근 카드 안에, 없으면 앱 캐릭터

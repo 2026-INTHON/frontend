@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import type { Emotion } from './api';
 
 export type CharId = 'seoyun' | 'junho' | 'boss' | 'prof';
 export type PersonaId = 'tease' | 'picky' | 'calm';
@@ -60,7 +61,7 @@ export const PERSONAS: Record<CharId, Persona[]> = {
 // ---- 장면 스크립트 (AI 연결 전 고정 데이터) ----
 export type Cue = { k: '표정' | '억양' | '망설임' | '침묵' | '행동'; v: string };
 // sub: 선택 언어 자막, audio: 서버가 준 그 대사 음성 URL, turnId: 반응 대사면 해당 턴 (다시 듣기용)
-export type Line = { line: string; action?: string; cues?: Cue[]; sub?: string | null; audio?: string | null; turnId?: string };
+export type Line = { line: string; action?: string; cues?: Cue[]; sub?: string | null; audio?: string | null; turnId?: string; emotion?: Emotion };
 export type Turn = Line & {
   byPersona?: Partial<Record<PersonaId, Line>>; // 성격마다 다른 말투·단서
   clue: { focus: string; act: string; ctx: string }; // 힌트 1단계: 주목 표현 · 행동 · 상황 단서
@@ -74,6 +75,7 @@ export type Turn = Line & {
   goodReply: string;
   midReply: string; // △ 일 때 반응
   badReply: string;
+  replyEmotions?: { good: Emotion; mid: Emotion; bad: Emotion };
   views: { who: string; meaning: string; cue: string }[]; // 관점 전환: 같은 말을 다른 사람이 하면?
 };
 
@@ -106,6 +108,7 @@ export const SCENES: Scene[] = [
         badWhy: '진행 상황 대신 변명부터 해서 책임을 피하는 것처럼 들렸어요.',
         better: '죄송합니다, 지금 70%까지 됐습니다. 내일 오전까지 드려도 될까요?',
         goodReply: '그래요, 내일 10시까지는 꼭 주세요.',
+        replyEmotions: { good: 'neutral', mid: 'confused', bad: 'angry' },
         midReply: '음… 그래서 정확히 언제요?',
         badReply: '…그래서 언제 되는데요?',
         views: [
@@ -127,6 +130,7 @@ export const SCENES: Scene[] = [
         badWhy: '남은 일이 뭔지 흐려서, 정말 끝낼 수 있을지 믿음이 안 갔어요.',
         better: '매출 표 정리랑 결론 요약이 남았습니다. 오늘 표까지는 끝내겠습니다.',
         goodReply: '알겠어요. 표 먼저 보내 줘요.',
+        replyEmotions: { good: 'neutral', mid: 'neutral', bad: 'confused' },
         midReply: '좀 더 구체적으로요.',
         badReply: '이것저것이 뭔데요?',
         views: [
@@ -162,6 +166,7 @@ export const SCENES: Scene[] = [
         badWhy: '"아무거나"는 고민하기 싫다는 뜻으로 들려서 서운하게 만들었어요.',
         better: '토요일 점심에 전시 보러 갈래? 너는 뭐 하고 싶어?',
         goodReply: '오 전시 좋아! 그럼 끝나고 파스타 먹자.',
+        replyEmotions: { good: 'happy', mid: 'confused', bad: 'sad' },
         midReply: '음… 그거 말고 다른 건?',
         badReply: '…또 아무거나야?',
         views: [
@@ -193,6 +198,7 @@ export const SCENES: Scene[] = [
         badWhy: '시험에만 관심 있는 것처럼 들려서 질문의 의도가 가벼워 보였어요.',
         better: '이 부분 더 공부해 보고 싶은데, 참고할 자료가 있을까요?',
         goodReply: '좋은 질문이에요. 다음 주에 논문 하나 보내 줄게요.',
+        replyEmotions: { good: 'happy', mid: 'confused', bad: 'confused' },
         midReply: '어떤 부분이요?',
         badReply: '…시험이 그렇게 궁금해요?',
         views: [

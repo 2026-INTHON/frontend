@@ -16,6 +16,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run test:voice
       - run: npm run build:web
         env:
           EXPO_PUBLIC_API_URL: https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.com

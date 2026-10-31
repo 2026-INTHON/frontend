@@ -1,5 +1,9 @@
 # FE Migration V2 — 엔딩 대사·정리 카드·추가 감정 이미지
 
+2026-11-01 재생·운영 수정: 데모 대사도 `POST /api/v1/speech/preview`로 같은 캐릭터 음성을 받는다. `{text,pack,characterId,personalityId,emotion}`을 보내며 인증·기존 TTS 한도·캐시가 적용되고 학습 기록은 만들지 않는다. 오프라인에서는 대사와 다시 듣기를 제공하고 기기 나레이션으로 조용히 대체하지 않는다. `demo`·언어·캐릭터·성격이 바뀌면 열린 장면도 새 엔진으로 시작한다. 실학습 기본값은 live이고 운영 mock 채점은 차단한다.
+
+배포 시 정적 JS/에셋은 VM 공유 저장소에 이전 버전과 함께 보존한다. 앱 HTML은 no-store, 없는 정적 파일은 HTML 대신 404를 반환한다. Google 운영 Site URL과 `/auth/callback` 허용 주소도 실제 HTTPS 도메인을 사용한다.
+
 2026-11-01. BE·AI의 엔딩 응답을 FE에 연결하기 위한 문서다. FE 앱 소스 변경은 포함하지 않는다. 전체 학습·생성·인증 계약은 [FE Integration](FE_INTEGRATION.md)을 따른다.
 
 ## 먼저 연결할 것

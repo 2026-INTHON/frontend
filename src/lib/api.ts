@@ -267,6 +267,7 @@ export const api = {
   ending: (id: string) => call<ApiEnding>(`/sessions/${id}/ending`),
   // 반응 대사는 {turnId}, 지금 노드 대사는 {} (서명 URL은 10분 유효)
   speech: (id: string, turnId?: string) => call<{ audioUrl: string }>(`/sessions/${id}/speech`, { method: 'POST', body: JSON.stringify(turnId ? { turnId } : {}) }, true, 20000),
+  previewSpeech: (b: { text: string; pack: 'ko'|'en'; characterId: string; personalityId: string; emotion?: Emotion; speed?: number }) => call<{ audioUrl: string; voice: string; cached: boolean }>('/speech/preview', { method: 'POST', body: JSON.stringify(b) }, true, 30000),
   transcribe: async (uri: string, pack: string) => {
     const fd = new FormData();
     if (Platform.OS === 'web') {
