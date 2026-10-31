@@ -1,5 +1,6 @@
 import React from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
+import { setSignedOutHandler } from '../lib/api';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, NotoSansKR_400Regular, NotoSansKR_500Medium, NotoSansKR_700Bold, NotoSansKR_900Black } from '@expo-google-fonts/noto-sans-kr';
 import { BlackHanSans_400Regular } from '@expo-google-fonts/black-han-sans';
@@ -7,6 +8,9 @@ import { View, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider } from '../lib/store';
 import { C } from '../lib/theme';
+
+// 회원 토큰 갱신이 실패하면 처음 화면(로그인)으로
+setSignedOutHandler(() => router.replace('/'));
 
 export default function RootLayout() {
   const [loaded] = useFonts({ NotoSansKR_400Regular, NotoSansKR_500Medium, NotoSansKR_700Bold, NotoSansKR_900Black, BlackHanSans_400Regular });

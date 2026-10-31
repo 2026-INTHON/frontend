@@ -8,8 +8,8 @@ import { IMG, PERSONAS, PersonaId, charById, sceneForChar } from '../../lib/data
 import { useStore } from '../../lib/store';
 import * as haptic from '../../lib/haptics';
 
-const X = [-112, 0, 112];
-const ROT = ['-8deg', '0deg', '8deg'];
+// 카드 자리: -1 왼쪽, 0 가운데, 1 오른쪽 (±2 는 화면 밖으로 빠지는 중)
+const SLOTS = [-2, -1, 0, 1, 2];
 
 // 05 성격 고르기: 카드 3장이 펼쳐지고, 고르면 바로 장면 시작
 export default function PersonaPick() {
@@ -17,20 +17,39 @@ export default function PersonaPick() {
   const list = PERSONAS[char];
   const [sel, setSel] = useState<PersonaId>(persona);
   const c = charById(char);
-  const others = list.filter((p) => p.id !== sel);
-  const order = [others[0], list.find((p) => p.id === sel)!, others[1]];
   const cur = list.find((p) => p.id === sel)!;
-  // 카드 섞기: 가운데로 모였다가 순서를 바꾸고 다시 펼쳐요
-  const spread = useRef(new Animated.Value(1)).current;
+  // 카드 순서 [왼쪽, 가운데, 오른쪽]
+  const [order, setOrder] = useState<PersonaId[]>(() => {
+    const o = list.filter((p) => p.id !== persona).map((p) => p.id);
+    return [o[0], persona, o[1]];
+  });
+  const pos = useRef(Object.fromEntries(order.map((id, i) => [id, new Animated.Value(i - 1)])) as Record<PersonaId, Animated.Value>).current;
   const busy = useRef(false);
+
+  // 옆 카드를 고르면 캐러셀처럼 옆으로 한 칸 밀려요. 반대쪽 끝 카드는 밖으로 나갔다가 반대편에서 들어와요.
   function pick(id: PersonaId) {
-    if (id === sel || busy.current) return;
+    const idx = order.indexOf(id);
+    if (idx === 1 || busy.current) return;
     busy.current = true;
     haptic.tap();
-    Animated.timing(spread, { toValue: 0, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
-      setSel(id);
-      Animated.spring(spread, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }).start(() => (busy.current = false));
-    });
+    const dir = idx === 2 ? -1 : 1;
+    const next = dir === -1 ? [order[1], order[2], order[0]] : [order[2], order[0], order[1]];
+    setOrder(next);
+    setSel(id);
+    const ease = { duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true };
+    Animated.parallel(
+      order.map((cid, i) => {
+        const from = i - 1;
+        const to = from + dir;
+        if (Math.abs(to) <= 1) return Animated.timing(pos[cid], { toValue: to, ...ease });
+        // 끝에서 밖으로 → 반대편으로 순간 이동 → 안으로
+        return Animated.sequence([
+          Animated.timing(pos[cid], { toValue: to, duration: 160, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          Animated.timing(pos[cid], { toValue: -to, duration: 0, useNativeDriver: true }),
+          Animated.timing(pos[cid], { toValue: -to / 2, duration: 200, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        ]);
+      })
+    ).start(() => (busy.current = false));
   }
   return (
     <Screen>
@@ -40,25 +59,30 @@ export default function PersonaPick() {
         <T s="sub">성격에 따라 반응과 난이도가 달라져요</T>
       </View>
       <View style={{ height: 300, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
-        {order.map((p, i) => {
+        {order.map((pid, i) => {
+          const p = list.find((x) => x.id === pid)!;
           const mid = i === 1;
+          const v = pos[pid];
           const tf = {
+            opacity: v.interpolate({ inputRange: SLOTS, outputRange: [0, 1, 1, 1, 0] }),
             transform: [
-              { translateX: spread.interpolate({ inputRange: [0, 1], outputRange: [0, X[i]] }) },
-              { rotate: spread.interpolate({ inputRange: [0, 1], outputRange: ['0deg', ROT[i]] }) },
+              { translateX: v.interpolate({ inputRange: SLOTS, outputRange: [-230, -118, 0, 118, 230] }) },
+              { translateY: v.interpolate({ inputRange: SLOTS, outputRange: [30, 22, 0, 22, 30] }) },
+              { rotate: v.interpolate({ inputRange: SLOTS, outputRange: ['-14deg', '-8deg', '0deg', '8deg', '14deg'] }) },
+              { scale: v.interpolate({ inputRange: SLOTS, outputRange: [0.7, 0.8, 1, 0.8, 0.7] }) },
             ],
           };
           return (
             <AnimatedPressable
-              key={p.id}
-              onPress={() => pick(p.id)}
+              key={pid}
+              onPress={() => pick(pid)}
               style={{
                 position: 'absolute',
-                width: mid ? 176 : 140,
-                height: mid ? 260 : 210,
+                width: 176,
+                height: 260,
                 left: '50%',
-                marginLeft: mid ? -88 : -70,
-                top: mid ? 20 : 45,
+                marginLeft: -88,
+                top: 20,
                 zIndex: mid ? 2 : 1,
                 backgroundColor: C.white,
                 borderRadius: 20,
@@ -68,8 +92,8 @@ export default function PersonaPick() {
                 ...tf,
               }}
             >
-              <View style={{ height: mid ? 160 : 126, backgroundColor: '#F8F8F9', overflow: 'hidden' }}>
-                <Image source={IMG.card[char]} style={{ width: '170%', height: mid ? 437 : 351, marginLeft: '-35%', marginTop: 6 }} resizeMode="cover" />
+              <View style={{ height: 160, backgroundColor: '#F8F8F9', overflow: 'hidden' }}>
+                <Image source={IMG.card[char]} style={{ width: '170%', height: 437, marginLeft: '-35%', marginTop: 6 }} resizeMode="cover" />
               </View>
               <View style={{ padding: 12 }}>
                 <T s="h3">{p.name} <T style={{ color: C.sub }}>{'•'.repeat(p.id === 'picky' ? 3 : p.id === 'tease' ? 2 : 1)}</T></T>
