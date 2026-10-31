@@ -1,5 +1,7 @@
 # Malo FE API 연동 작업
 
+> 최신 엔딩 API·정리 카드·추가 감정 이미지 연결은 [FE Migration V2](FE_MIGRATION_V2.md)를 먼저 확인하세요.
+
 기준: miod4198의 [PR 7](https://github.com/2026-INTHON/frontend/pull/7), 최종 head `b59d663a5fddb46412fae0f6b2e7da51e024c2df`. 이 PR은 develop에 병합됐다. 아래는 이 상태에서 **FE가 추가 구현할 작업**이다. BE/AI 구현과 FE 구현 완료를 구분한다.
 
 캐릭터·성격·예시 대본·챕터는 BE DB를 원본으로 사용한다. 대화는 서버가 진행하며, 생성은 화면을 닫아도 계속된다. FE에 있는 카드·힌트·판정 화면은 유지하고 데이터와 상태 연결을 교체하면 된다.
@@ -14,7 +16,7 @@ BE·AI 배포와 실제 8발화 → 상세 보고서 생성 검증을 마쳤다.
 | 대화 전 상황·목표·번역 | `session.briefing`과 `briefing.translation` |
 | 한국어 원문 + 선택 언어 자막 + 음성 | `npc` / `turn.npcReplySubtitle` / `audioUrl` |
 | 학습 판정 O·△·X·?와 사유 | `turn.evaluation.mark/reason/reasonSubtitle` |
-| 캐릭터 표정·몸짓 이미지 | 판정과 독립적인 `turn.emotion/render`, DB 등록분을 포함한 이미지 30개 |
+| 캐릭터 표정·몸짓 이미지 | 판정과 독립적인 `turn.emotion/render`, DB 등록분을 포함한 이미지 34개 |
 | 완료 평가 → 대화별 자세히 보기 | `result.report` → `GET /sessions/{id}/report` |
 
 공개 교육과정은 **8챕터·32서브챕터, 각각 8노드**다. 재도전하면 실제 발화 수는 늘어난다. 기존 1~3노드 예시도 남아 있으므로 배열 첫 항목을 고르면 안 된다. 서버가 8노드를 제공해도 현재 FE의 자동 fallback·한마디 대본을 연결한 상태에서는 화면이 자동으로 바뀌지 않는다.
@@ -79,7 +81,7 @@ FE에는 Azure/OpenAI/Lablup 키, Supabase service role, SSH private key를 넣�
 
 응답의 `turn.npcReply`는 방금 답에 대한 반응이다. 피드백을 닫은 다음 `session.npc`의 다음 대사를 표시한다. 새 대사에서 action·cues도 함께 갱신한다. 마지막 결과가 있으면 마지막 대사를 다시 진행하지 않는다.
 
-`result.ending`은 `{id,kind,title,text}`이며 `happy`, `deferred`, `breakdown` 세 결말을 제공한다. `passed`는 학습 성공 여부다. **O를 받았어도 교수님의 정책이나 상대 의사 때문에 요청이 보류될 수 있다.** 엔딩과 학습 점수를 같은 의미로 취급하지 않는다. 다음 회차는 `result.nextSceneId`를 사용한다.
+`result.ending`은 `{id,kind,title,text,emotion?,render,dialogue,recap}`이며 `happy`, `deferred`, `breakdown` 세 결말을 제공한다. `passed`는 학습 성공 여부다. **O를 받았어도 교수님의 정책이나 상대 의사 때문에 요청이 보류될 수 있다.** 엔딩과 학습 점수를 같은 의미로 취급하지 않는다. 다음 회차는 `result.nextSceneId`를 사용한다.
 
 △의 진행 여부는 서버 `evaluation.progression`을 따른다. 임의로 통과시키는 skip API는 없다. FE live 모드의 정답 보기·건너뛰기는 진행 버튼으로 쓰지 않고, 힌트 후 다시 말하기로 연결한다.
 
@@ -214,7 +216,7 @@ type GenerationJob = {
 
 ## 캐릭터 모델과 계정 테스트
 
-GLB 모델 대신 같은 캐릭터의 표정·몸짓 이미지를 미리 받는 방식으로 진행한다. `GET /assets/characters`를 미리 로드하고 `session.npc.render` 및 `turn.render`에 따라 전환한다. 현재 교수·여자친구 각 10개와 친구·부장 각 5개, 총 30개 이미지 항목을 제공한다. 같은 캐릭터의 DB 세트를 우선하며 AI가 사용 조건·태그·현재 반응을 보고 실제 이미지 키를 선택한다. 자세한 필드·대체 순서는 [캐릭터 이미지 요청사항](CHARACTER_IMAGES.md)을 따른다.
+GLB 모델 대신 같은 캐릭터의 표정·몸짓 이미지를 미리 받는 방식으로 진행한다. `GET /assets/characters`를 미리 로드하고 `session.npc.render` 및 `turn.render`에 따라 전환한다. 현재 여자친구 13개·교수 11개와 친구·부장 각 5개, 총 34개 이미지 항목을 제공한다. 같은 캐릭터의 DB 세트를 우선하며 AI가 사용 조건·태그·현재 반응을 보고 실제 이미지 키를 선택한다. 자세한 필드·대체 순서는 [캐릭터 이미지 요청사항](CHARACTER_IMAGES.md)을 따른다.
 
 Google 로그인은 PR 7의 PKCE·게스트 이관을 유지한다. BE는 기존 중첩 `google.supabaseUrl/publishableKey`와 PR 7이 읽는 최상위 공개 설정을 함께 제공한다. 배포 웹의 `/auth/callback`이 Supabase Redirect URLs에 허용돼 있어야 한다. 네이티브 `malo://auth/callback`은 Expo Go가 커스텀 scheme 앱이 되는 것을 뜻하지 않는다. **구독·앱스토어 결제 없이 두 기기의 전체 로그인·알림 흐름을 테스트할 경로는 HTTPS PWA**다. Expo Go는 UI·API·녹음 테스트에 사용하고, 전용 scheme OAuth는 해당 scheme을 포함한 개발 빌드에서 검증한다.
 
@@ -241,3 +243,6 @@ Google 로그인은 PR 7의 PKCE·게스트 이관을 유지한다. BE는 기존
 배경 선명도 계약: 기존 FE 카페 배경은 파일 자체가 부드럽게 처리돼 있다. 신규 배경도 BE에서 Gaussian blur를 적용한 파일을 제공하므로 FE에서는 원본 URL을 그대로 표시한다. 캐릭터·텍스트에는 블러를 주지 않는다. 배경 전체 View에 filter/blur를 걸어 자식 캐릭터까지 흐려지게 하지 않는다.
 
 이번 서버 검증: 8회 실제 발화로 8노드를 완료하고 대화별 보고서를 생성했다. HTTP 응답 시간은 중앙값 4.74초, 최대 6.21초였다. 텍스트 제출부터 AI·인라인 TTS 응답까지이며 마이크·STT·기기 재생은 포함하지 않는다. 기기에서 녹음 종료 기준 3~5초를 따로 측정해야 한다.
+
+
+배드엔딩 이미지 연결: 여자친구 경멸·분노·눈물 및 교수 분노 4종을 DB/API에 추가했다. 결과 화면은 `result.ending.render`를 사용하며, 일반 대화는 기존 `turn.render`를 따른다. 감정은 O·△·X·?와 분리한다. 강한 실패 엔딩에는 적절한 새 이미지를 우선하고 정중한 보류는 차분한 슬픔도 가능하다. 자세한 키와 호환 처리는 [캐릭터 이미지 계약](CHARACTER_IMAGES.md#추가-감정-4종과-배드엔딩)을 따른다. 이 변경도 FE 앱 소스가 아닌 연동 문서만 수정한다.
