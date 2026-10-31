@@ -6,6 +6,21 @@ import { getTokens, setTokens, MaloUser, Tokens } from './tokens';
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.com').replace(/\/$/, '') + '/api/v1';
 
 export type Emotion = 'neutral' | 'happy' | 'confused' | 'sad' | 'angry';
+export type Mark4 = 'O' | '△' | 'X' | '?';
+
+// 캐릭터 표정·몸짓 이미지 (서버가 고른 것을 그대로 써요)
+export type Render = { characterId?: string; emotion?: Emotion; gesture?: string; assetKey?: string; imageUrl?: string | null };
+// 비언어 단서: 서버 형식이 조금 달라도 받아요 ({k,v} / {kind,text} / 문자열)
+export type RawCue = string | { k?: string; v?: string; kind?: string; type?: string; label?: string; text?: string; value?: string; description?: string };
+
+export type Briefing = {
+  title?: string;
+  partner: string;
+  situation: string;
+  goal: string;
+  translation?: { language: string; title?: string; partner?: string; situation?: string; goal?: string } | null;
+};
+
 export type PlaySession = {
   id: string;
   sceneId: string;
@@ -17,30 +32,68 @@ export type PlaySession = {
   initialLives: number;
   nodeIndex: number;
   nodeCount: number;
-  briefing: { partner: string; situation: string; goal: string };
-  npc: { text: string; emotion: Emotion; assetKey?: string };
+  briefing: Briefing;
+  npc: { text: string; emotion?: Emotion; assetKey?: string; action?: string | null; cues?: RawCue[]; render?: Render | null; subtitle?: { language: string; text: string } | null };
   hintsUsed: number;
+  backgroundUrl?: string | null;
 };
+
+export type Evaluation = {
+  mark: Mark4;
+  category?: 'excellent' | 'acceptable' | 'inappropriate' | 'off_topic';
+  label?: string;
+  reason?: string;
+  reasonSubtitle?: { language: string; text: string } | null;
+  goalAchieved?: boolean;
+  progression?: 'advance' | 'retry';
+  provisional?: boolean;
+};
+
 export type TurnFeedback = {
   tone: { score: number; label: string } | null;
   speed: { value: number; unit: string } | null;
   hesitation: { pauseCount: number; fillerCount: number; note?: string } | null;
+  ending?: { label: string } | string | null;
   message: string;
   betterExpression: string;
   reason: string;
+  views?: { who: string; meaning: string; cue?: string }[];
 };
-export type ApiTurn = { id: string; text: string; outcome: 'correct' | 'misunderstanding' | 'clarify'; feedback: TurnFeedback; npcReply: string; emotion: Emotion; lifeDelta: number };
+export type ApiTurn = {
+  id: string;
+  nodeId?: string;
+  attempt?: number;
+  text: string;
+  outcome?: 'correct' | 'misunderstanding' | 'clarify';
+  evaluation?: Evaluation | null;
+  native?: boolean;
+  comparison?: { firstAnswer: string; currentAnswer: string } | null;
+  feedback: TurnFeedback;
+  npcReply: string;
+  emotion?: Emotion;
+  render?: Render | null;
+  lifeDelta: number;
+};
 export type SessionResult = {
   sessionId: string;
   passed: boolean;
-  score: number;
+  score: number | null;
+  grade?: string | null;
+  achievement?: { reach: number | null; infer: number | null; self: number | null } | null;
+  ending?: { id: string; kind: 'happy' | 'deferred' | 'breakdown' | string; title: string; text: string } | null;
   goodUtterances: { text: string; reason: string }[];
   improvableUtterances: { text: string; betterExpression: string; reason: string; mistakeId: string | null }[];
   rewardCoins: number;
   nextSceneId: string | null;
+  report?: { reportId: string; status: string } | null;
 };
-export type SubmitTurnResult = { turn: ApiTurn; session: PlaySession; result: SessionResult | null; oopsMoment: { triggered: boolean; lifeDelta: number }; mistakeId: string | null };
+export type SubmitTurnResult = { turn: ApiTurn; session: PlaySession; result: SessionResult | null; oopsMoment?: { triggered: boolean; lifeDelta: number }; mistakeId?: string | null };
 export type ApiScene = { id: string; title: string; situation: string; goal: string; pack: 'ko' | 'en'; characterId: string; personalityId: string; nodeCount: number };
+export type HintRes = { step?: 1 | 2; clue?: RawCue[] | null; hiddenThought?: string | null; tip?: string | null };
+
+export type ApiCharacter = { id: string; clientKey?: string; name: string; role?: string; free?: boolean; locked?: boolean; imageUrl?: string | null; cardUrl?: string | null; personalities?: { id: string; clientKey?: string; name: string; short?: string; long?: string; level?: string }[] };
+export type ApiSub = { id: string; title: string; sceneId?: string | null; state?: 'done' | 'now' | 'open' | 'locked'; score?: number | null; grade?: string | null; availability?: 'ready' | 'unavailable' | 'generating' | string };
+export type ApiChapter = { id: string; no?: number; title: string; description?: string; desc?: string; source?: 'curriculum' | 'examples' | 'personal'; locked?: boolean; generationStatus?: 'ready' | 'generating' | 'failed' | null; characterId?: string; subs: ApiSub[] };
 
 // 공통 응답 {data, meta} 면 data 만 꺼내요
 const unwrap = (j: any) => (j && typeof j === 'object' && 'data' in j && ('meta' in j || Object.keys(j).length <= 2) ? j.data : j);
@@ -125,18 +178,34 @@ export const authApi = {
   },
 };
 
+const qs = (q: Record<string, string | undefined>) => new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString();
+const isNetErr = (e: unknown) => !(e instanceof ApiError) || e.status >= 500;
+
 export const api = {
   health: () => call<{ status?: string }>('/health', {}, false, 5000),
-  scenes: (q: { pack?: string; characterId?: string; personalityId?: string }) =>
-    call<ApiScene[]>('/scenes?' + new URLSearchParams(Object.entries(q).filter(([, v]) => v) as any).toString(), {}, false),
-  start: (sceneId: string) => call<PlaySession>('/sessions', { method: 'POST', body: JSON.stringify({ sceneId }) }),
-  turn: (id: string, b: { clientTurnId: string; inputType: 'text' | 'voice'; text: string; transcriptId?: string }) =>
-    call<SubmitTurnResult>(`/sessions/${id}/turns`, { method: 'POST', body: JSON.stringify(b) }, true, 30000),
-  hint: (id: string) => call<{ hiddenThought: string; tip: string }>(`/sessions/${id}/hint`, { method: 'POST' }),
-  retry: (id: string) => call<PlaySession>(`/sessions/${id}/retry`, { method: 'POST' }),
-  pause: (id: string) => call<PlaySession>(`/sessions/${id}/pause`, { method: 'POST' }),
+  scenes: (q: { pack?: string; characterId?: string; personalityId?: string }) => call<ApiScene[]>('/scenes?' + qs(q), {}, false),
+  characters: () => call<ApiCharacter[]>('/characters', {}, false, 10000),
+  chapters: (q: { pack: string; characterId: string }) => call<ApiChapter[]>('/chapters?' + qs(q), {}, true, 15000),
+  // aiMode 를 빼면 옛 예시는 mock 채점이라 꼭 live 로 보내요
+  start: (sceneId: string, subtitleLanguage?: string) => call<PlaySession>('/sessions', { method: 'POST', body: JSON.stringify({ sceneId, aiMode: 'live', subtitleLanguage }) }, true, 30000),
+  // AI 응답은 5초를 넘을 수 있어요. 네트워크 오류는 같은 clientTurnId 로 두 번까지 다시 보내요.
+  turn: async (id: string, b: { clientTurnId: string; inputType: 'text' | 'voice'; text: string; transcriptId?: string }) => {
+    let last: unknown;
+    for (let i = 0; i < 3; i++) {
+      try {
+        return await call<SubmitTurnResult>(`/sessions/${id}/turns`, { method: 'POST', body: JSON.stringify(b) }, true, 60000);
+      } catch (e) {
+        last = e;
+        if (!isNetErr(e)) throw e;
+      }
+    }
+    throw last;
+  },
+  hint: (id: string, step: 1 | 2) => call<HintRes>(`/sessions/${id}/hint`, { method: 'POST', body: JSON.stringify({ step }) }),
+  retry: (id: string) => call<PlaySession>(`/sessions/${id}/retry`, { method: 'POST', body: '{}' }),
+  pause: (id: string) => call<PlaySession>(`/sessions/${id}/pause`, { method: 'POST', body: '{}' }),
   result: (id: string) => call<SessionResult>(`/sessions/${id}/result`),
-  speech: (id: string) => call<{ audioUrl: string }>(`/sessions/${id}/speech`, { method: 'POST' }, true, 20000),
+  speech: (id: string) => call<{ audioUrl: string }>(`/sessions/${id}/speech`, { method: 'POST', body: '{}' }, true, 20000),
   transcribe: async (uri: string, pack: string) => {
     const fd = new FormData();
     if (Platform.OS === 'web') {
@@ -152,4 +221,4 @@ export const api = {
   },
 };
 
-export const absUrl = (u: string) => (u.startsWith('http') ? u : API_BASE.replace(/\/api\/v1$/, '') + u);
+export const absUrl = (u: string) => (/^(https?:|data:|blob:)/.test(u) ? u : API_BASE.replace(/\/api\/v1$/, '') + u);

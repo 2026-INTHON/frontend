@@ -14,7 +14,7 @@ export function useRec() {
       rec.record();
       return true;
     } catch {
-      return true; // 웹 등에서 녹음이 안 돼도 화면 흐름은 보여 줘요
+      return false; // 녹음을 못 켜면 실패로 알려요 (화면은 직접 입력으로 바꿔요)
     }
   }
 

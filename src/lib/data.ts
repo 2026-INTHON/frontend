@@ -203,8 +203,17 @@ export const SCENES: Scene[] = [
   },
 ];
 export const lineFor = (t: Turn, p: PersonaId): Line => ({ line: t.line, action: t.action, cues: t.cues, ...(t.byPersona?.[p] ?? {}) });
-export const sceneById = (id: string) => SCENES.find((s) => s.id === id) ?? SCENES[0];
-export const sceneForChar = (c: CharId) => SCENES.find((s) => s.char === c) ?? SCENES[0];
+// 데모 모드 전용: 앱 안 대본 찾기. 없으면 undefined (다른 장면으로 몰래 바꾸지 않아요)
+export const sceneById = (id: string) => SCENES.find((s) => s.id === id);
+// 데모 모드에서 캐릭터에 맞는 첫 장면 (준호는 데모 대본이 없어서 서윤 장면)
+export const sceneForChar = (c: CharId) => SCENES.find((s) => s.char === c) ?? SCENES.find((s) => s.char === 'seoyun')!;
+
+// 서버 ID ↔ 앱 표시용 키 (BE DB: girlfriend/friend/manager/professor, playful/strict/calm)
+export const SERVER_CHAR: Record<CharId, string> = { seoyun: 'girlfriend', junho: 'friend', boss: 'manager', prof: 'professor' };
+export const SERVER_PERSONA: Record<PersonaId, string> = { tease: 'playful', picky: 'strict', calm: 'calm' };
+export const charFromServer = (id?: string | null, fb: CharId = 'seoyun'): CharId => (Object.keys(SERVER_CHAR) as CharId[]).find((k) => SERVER_CHAR[k] === id || k === id) ?? fb;
+export const personaFromServer = (id?: string | null, fb: PersonaId = 'calm'): PersonaId => (Object.keys(SERVER_PERSONA) as PersonaId[]).find((k) => SERVER_PERSONA[k] === id || k === id) ?? fb;
+export const PLACE_OF: Record<CharId, Place> = { boss: 'office', seoyun: 'cafe', prof: 'street', junho: 'street' };
 
 export const LANGS = [
   { id: 'en', name: 'English', ko: '영어' },
