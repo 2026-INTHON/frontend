@@ -6,6 +6,7 @@ import { getTokens, setTokens, MaloUser, Tokens } from './tokens';
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.com').replace(/\/$/, '') + '/api/v1';
 
 export type Emotion = 'neutral' | 'happy' | 'confused' | 'sad' | 'angry';
+export type SpeechLevel = 'polite' | 'casual';
 export type Mark4 = 'O' | '△' | 'X' | '?';
 
 // 캐릭터 표정·몸짓 이미지 (서버가 고른 것을 그대로 써요)
@@ -33,7 +34,7 @@ export type PlaySession = {
   nodeIndex: number;
   nodeCount: number;
   briefing: Briefing;
-  npc: { text: string; emotion?: Emotion; assetKey?: string; action?: string | null; cues?: RawCue[]; render?: Render | null; subtitle?: { language: string; text: string } | null; audioUrl?: string | null };
+  npc: { text: string; speechLevel?: SpeechLevel; emotion?: Emotion; assetKey?: string; action?: string | null; cues?: RawCue[]; render?: Render | null; subtitle?: { language: string; text: string } | null; audioUrl?: string | null };
   hintsUsed: number;
   backgroundUrl?: string | null;
 };
@@ -70,6 +71,7 @@ export type ApiTurn = {
   comparison?: { firstAnswer: string; currentAnswer: string } | null;
   feedback: TurnFeedback;
   npcReply: string;
+  npcSpeechLevel?: SpeechLevel;
   action?: string;
   cues?: RawCue[];
   npcReplySubtitle?: { language: string; text: string } | null;
