@@ -32,7 +32,7 @@ export default function Dress() {
   }
 
   return (
-    <ImageBackground source={IMG.bg[bgPlace]} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={IMG.bg[bgPlace]} style={{ flex: 1, width: '100%' }} imageStyle={{ width: '100%', height: '100%' }} resizeMode="cover">
       <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(238,230,219,0.3)' } as any} />
       <Image source={IMG.char[id]} style={{ position: 'absolute', top: ins.top + 70, alignSelf: 'center', width: '66%', height: '78%' }} resizeMode="contain" />
       <View style={{ paddingTop: ins.top + 8, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', gap: 12 }}>

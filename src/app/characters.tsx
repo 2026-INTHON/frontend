@@ -27,7 +27,8 @@ export default function Characters() {
           return (
             <Pressable key={c.id} onPress={() => (open ? choose(c.id) : setPw(true))} accessibilityRole="button" accessibilityState={{ selected: st.char === c.id }} accessibilityLabel={`${c.name} 고르기`} style={{ flexDirection: 'row', gap: 14, backgroundColor: C.white, borderRadius: 20, padding: 12, borderWidth: st.char === c.id ? 2 : 0, borderColor: C.ink }}>
               <View style={{ width: 96, height: 112, borderRadius: 14, backgroundColor: '#F8F8F9', overflow: 'hidden' }}>
-                <Image source={IMG.char[c.id]} style={{ width: 96, height: 290, marginTop: 6, opacity: open ? 1 : 0.4 }} resizeMode="contain" />
+                {/* 칸보다 넓은 상자에 같은 높이로 맞춰서, 가로가 넓은 그림도 얼굴 위치가 같게 */}
+                <Image source={IMG.char[c.id]} style={{ width: 150, height: 290, marginLeft: -27, marginTop: 6, opacity: open ? 1 : 0.4 }} resizeMode="contain" />
                 {!open ? <Feather name="lock" size={22} color={C.ink} style={{ position: 'absolute', top: 44, left: 37 }} /> : null}
               </View>
               <View style={{ flex: 1, gap: 6, justifyContent: 'center' }}>

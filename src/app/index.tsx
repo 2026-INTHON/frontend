@@ -16,7 +16,7 @@ export default function Welcome() {
   if (onboarded) return <Redirect href="/home" />;
   return (
     <Screen bg={C.white}>
-      <View style={{ paddingHorizontal: 24, marginTop: 40 }}>
+      <View style={{ paddingHorizontal: 24, marginTop: 56 }}>
         <T s="h2">어서오세요!</T>
         <View style={{ marginTop: 10, marginBottom: 6 }}><Logo height={60} /></View>
         <T s="sub">말실수해도 괜찮은 대화 연습장</T>

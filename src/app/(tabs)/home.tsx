@@ -36,7 +36,7 @@ export default function Home() {
   const go = () => router.push({ pathname: '/scene/[id]', params: { id: next.id } });
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: ins.top + 8 }}>
+    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: Math.max(ins.top, 12) + 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, gap: 8 }}>
         <T s="h2" style={{ flex: 1 }}>{name ? `${name}님, 오늘도 한 장면만` : '오늘도 한 장면만 해 볼까요?'}</T>
         <IconBtn name="settings" size={36} onPress={() => router.push('/settings')} />

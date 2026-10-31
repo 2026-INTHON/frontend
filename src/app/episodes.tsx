@@ -81,7 +81,7 @@ export default function Episodes() {
       {/* 캐릭터 바꿔 보기 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 24, paddingVertical: 8 }}>
         {CHARACTERS.map((x) => (
-          <Chip key={x.id} label={`${x.name}${x.free || st.subscribed ? '' : ' 🔒'}`} on={x.id === char} onPress={() => { setChar(x.id); setOpen(null); }} />
+          <Chip key={x.id} label={`${x.name}${x.free || st.subscribed ? '' : ' 🔒'}`} on={x.id === char} onPress={() => { setChar(x.id); setOpen(null); if (x.free || st.subscribed) st.set({ char: x.id, persona: PERSONAS[x.id].some((p) => p.id === st.persona) ? st.persona : 'calm' }); }} />
         ))}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 24 }}>
