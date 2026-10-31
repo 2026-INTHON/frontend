@@ -4,7 +4,11 @@
 
 배포 시 정적 JS/에셋은 VM 공유 저장소에 이전 버전과 함께 보존한다. 앱 HTML은 no-store, 없는 정적 파일은 HTML 대신 404를 반환한다. Google 운영 Site URL과 `/auth/callback` 허용 주소도 실제 HTTPS 도메인을 사용한다.
 
-2026-11-01. BE·AI의 엔딩 응답을 FE에 연결하기 위한 문서다. FE 앱 소스 변경은 포함하지 않는다. 전체 학습·생성·인증 계약은 [FE Integration](FE_INTEGRATION.md)을 따른다.
+여자친구 음성은 Typecast SSFM 3.1을 사용한다. playful=아리, calm=예진, strict=MBTI ET 여이며 감정·반응에 맞는 프리셋과 강도를 AI가 고른다. `TYPECAST_API_KEY`는 BE·AI GitHub Actions Secrets에 보관하고 AI 서버에서만 사용한다. FE에는 키를 전달하지 않는다. 음성 캐시는 모델·목소리·성격·감정·반응을 구분한다.
+
+데모에서 저장된 `seoyun-weekend` 같은 이어하기 링크는 live 진입 시 선택한 성격의 서버 예시 ID로 변환한다. 서버에서 받은 교육과정·개인 장면 ID는 그대로 사용한다.
+
+2026-11-01. BE·AI의 엔딩 응답과 FE의 재생·운영 수정 내용을 정리한다. 전체 학습·생성·인증 계약은 [FE Integration](FE_INTEGRATION.md)을 따른다.
 
 ## 먼저 연결할 것
 
