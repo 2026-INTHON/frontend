@@ -58,30 +58,25 @@ export const PERSONAS: Record<CharId, Persona[]> = {
 };
 
 // ---- 장면 스크립트 (AI 연결 전 고정 데이터) ----
-export type Turn = {
-  line: string; // 캐릭터 대사
-  action: string; // (지문)
-  thought: string; // 속마음
-  tip: string; // 힌트
+export type Cue = { k: '표정' | '억양' | '망설임' | '침묵' | '행동'; v: string };
+export type Line = { line: string; action?: string; cues?: Cue[] };
+export type Turn = Line & {
+  byPersona?: Partial<Record<PersonaId, Line>>; // 성격마다 다른 말투·단서
+  clue: { focus: string; act: string; ctx: string }; // 힌트 1단계: 주목 표현 · 행동 · 상황 단서
+  thought: string; // 힌트 2단계: 실제 속마음
+  tip: string;
   sample: string; // 음성 인식 데모용 문장 (STT 연결 전)
-  good: string[]; // 이런 말이 들어가면 성공
-  bad: string[]; // 이런 말이 들어가면 말실수
-  badWhy: string; // 왜 문제였을까
-  better: string; // 더 나은 말
-  goodReply: string; // 성공했을 때 캐릭터 반응
-  badReply: string; // 실수했을 때 캐릭터 반응
+  good: string[]; // 들어가면 O
+  bad: string[]; // 들어가면 X
+  badWhy: string;
+  better: string; // 더 나은 한국어 표현
+  goodReply: string;
+  midReply: string; // △ 일 때 반응
+  badReply: string;
+  views: { who: string; meaning: string; cue: string }[]; // 관점 전환: 같은 말을 다른 사람이 하면?
 };
 
-export type Scene = {
-  id: string;
-  char: CharId;
-  no: string;
-  title: string;
-  place: Place;
-  situation: string;
-  goal: string;
-  turns: Turn[];
-};
+export type Scene = { id: string; char: CharId; no: string; title: string; place: Place; situation: string; goal: string; turns: Turn[] };
 
 export const SCENES: Scene[] = [
   {
@@ -96,6 +91,12 @@ export const SCENES: Scene[] = [
       {
         line: '김 대리, 보고서 오늘까지죠? 어디까지 됐어요?',
         action: '(서류를 넘기며 시계를 본다)',
+        cues: [{ k: '행동', v: '시계를 봄' }, { k: '억양', v: '"오늘까지죠?" 끝을 올림' }, { k: '침묵', v: '대답을 2초 기다림' }],
+        byPersona: {
+          tease: { line: '김 대리~ 보고서 오늘까지인 거 알죠? 설마 아직?', action: '(웃으며 의자를 돌린다)', cues: [{ k: '표정', v: '웃고 있지만 눈은 진지함' }, { k: '억양', v: '"설마" 길게 끎' }, { k: '행동', v: '의자를 돌려 마주 봄' }] },
+          calm: { line: '김 대리, 보고서 진행 상황 좀 들어볼 수 있을까요?', action: '(펜을 내려놓는다)', cues: [{ k: '행동', v: '펜을 내려놓음' }, { k: '억양', v: '차분하고 낮음' }, { k: '침묵', v: '끝까지 기다려 줌' }] },
+        },
+        clue: { focus: '"오늘까지죠?" — 확인하는 말투', act: '시계를 본다 → 시간이 신경 쓰임', ctx: '금요일 오후 4시, 마감 당일' },
         thought: '또 미루려나…\n어디까지 됐는지, 언제 되는지만 알면 되는데.',
         tip: '진행 상황이랑 끝낼 시간을 같이 말해 보세요.',
         sample: '죄송합니다, 지금 70% 정도 됐습니다. 내일 오전까지 드려도 될까요?',
@@ -104,27 +105,40 @@ export const SCENES: Scene[] = [
         badWhy: '진행 상황 대신 변명부터 해서 책임을 피하는 것처럼 들렸어요.',
         better: '죄송합니다, 지금 70%까지 됐습니다. 내일 오전까지 드려도 될까요?',
         goodReply: '그래요, 내일 10시까지는 꼭 주세요.',
+        midReply: '음… 그래서 정확히 언제요?',
         badReply: '…그래서 언제 되는데요?',
+        views: [
+          { who: '친구 준호에게', meaning: '너무 딱딱해서 어색해요. "70% 했어, 내일 오전에 줄게!"면 충분해요.', cue: '반말 · 가벼운 억양' },
+          { who: '장난 부장님에게', meaning: '같은 말도 웃으며 하면 분위기가 풀려요. 숫자는 그대로 정확하게.', cue: '웃는 표정이 단서' },
+          { who: '윤 교수님에게 (과제)', meaning: '"내일 오전까지 제출해도 될까요?"로 바꾸면 자연스러워요. 이유를 한 줄 덧붙이면 더 좋아요.', cue: '상황 단서가 회사 → 수업으로 바뀜' },
+        ],
       },
       {
         line: '좋아요. 그럼 남은 30%는 뭐예요?',
         action: '(펜을 내려놓고 쳐다본다)',
+        cues: [{ k: '표정', v: '살짝 누그러짐' }, { k: '행동', v: '펜을 내려놓음' }],
+        clue: { focus: '"남은 30%" — 구체적인 내용을 원함', act: '펜을 내려놓는다 → 들을 준비', ctx: '마감은 내일로 합의됨' },
         thought: '구체적으로 뭐가 남았는지만 말해 주면 돼.',
         tip: '남은 일을 한두 개로 콕 집어 말해 보세요.',
         sample: '매출 표 정리랑 결론 요약이 남았습니다. 오늘 표까지는 끝내겠습니다.',
         good: ['표', '요약', '정리', '분석', '남았'],
-        bad: ['이것저것', '그냥', '좀', '몰라'],
+        bad: ['이것저것', '그냥', '몰라'],
         badWhy: '남은 일이 뭔지 흐려서, 정말 끝낼 수 있을지 믿음이 안 갔어요.',
         better: '매출 표 정리랑 결론 요약이 남았습니다. 오늘 표까지는 끝내겠습니다.',
         goodReply: '알겠어요. 표 먼저 보내 줘요.',
+        midReply: '좀 더 구체적으로요.',
         badReply: '이것저것이 뭔데요?',
+        views: [
+          { who: '팀 동료에게', meaning: '"표랑 요약 남았어요, 표는 오늘 끝낼게요" 정도로 짧게 해도 돼요.', cue: '같은 직급 · 편한 존댓말' },
+          { who: '까탈 부장님에게', meaning: '"오늘 6시까지 표 보내드리겠습니다"처럼 시간까지 붙이면 더 좋아요.', cue: '시계를 보는 행동이 단서' },
+        ],
       },
     ],
   },
   {
     id: 'seoyun-weekend',
     char: 'seoyun',
-    no: 'EP 2',
+    no: 'EP 2-1',
     title: '주말 약속 정하기',
     place: 'cafe',
     situation: '카페에서 만난 서윤이 주말 계획을 물어요',
@@ -133,6 +147,12 @@ export const SCENES: Scene[] = [
       {
         line: '이번 주말에 뭐 할래? 너가 정해 봐~',
         action: '(빨대를 돌리며 쳐다본다)',
+        cues: [{ k: '억양', v: '"정해 봐~" 끝을 늘림' }, { k: '행동', v: '빨대를 돌림' }, { k: '표정', v: '기대하는 눈빛' }],
+        byPersona: {
+          picky: { line: '주말에 뭐 해? …또 아무거나라고 하면 안 돼.', action: '(팔짱을 낀다)', cues: [{ k: '행동', v: '팔짱' }, { k: '침묵', v: '말 끝에 1초 멈춤' }, { k: '표정', v: '살짝 뾰로통' }] },
+          calm: { line: '이번 주말에 하고 싶은 거 있어?', action: '(컵을 내려놓는다)', cues: [{ k: '억양', v: '부드럽게 올림' }, { k: '표정', v: '편안함' }] },
+        },
+        clue: { focus: '"너가 정해 봐~" — 성의를 보고 싶어 함', act: '빨대를 돌리며 기다림', ctx: '지난번에도 서윤이 다 정했어요' },
         thought: '또 "아무거나"라고 하면 진짜 서운할 거야.',
         tip: '하고 싶은 걸 하나 말하고, 서윤이 의견도 물어보세요.',
         sample: '토요일 점심에 전시 보러 갈래? 너는 뭐 하고 싶어?',
@@ -141,7 +161,12 @@ export const SCENES: Scene[] = [
         badWhy: '"아무거나"는 고민하기 싫다는 뜻으로 들려서 서운하게 만들었어요.',
         better: '토요일 점심에 전시 보러 갈래? 너는 뭐 하고 싶어?',
         goodReply: '오 전시 좋아! 그럼 끝나고 파스타 먹자.',
+        midReply: '음… 그거 말고 다른 건?',
         badReply: '…또 아무거나야?',
+        views: [
+          { who: '친구 준호에게', meaning: '"전시 보러 갈래?"만 해도 충분해요. 의견을 꼭 물을 필요는 없어요.', cue: '친구 사이 · 가벼운 말투' },
+          { who: '윤 교수님에게', meaning: '교수님께는 주말 약속을 묻지 않아요. "다음 주 면담 가능하실까요?"처럼 바꿔야 해요.', cue: '관계 단서가 완전히 바뀜' },
+        ],
       },
     ],
   },
@@ -157,6 +182,8 @@ export const SCENES: Scene[] = [
       {
         line: '네, 무슨 질문 있어요?',
         action: '(가방을 고쳐 메며 멈춰 선다)',
+        cues: [{ k: '행동', v: '가방을 고쳐 멤 → 바쁨' }, { k: '억양', v: '평평하고 짧음' }],
+        clue: { focus: '"무슨 질문" — 요점을 듣고 싶어 함', act: '가방을 고쳐 멘다 → 곧 가야 함', ctx: '수업 끝난 복도' },
         thought: '시험 얘기만 하려는 건 아니겠지?',
         tip: '어떤 부분이 궁금한지, 왜 더 알고 싶은지 말해 보세요.',
         sample: '오늘 배운 부분을 더 공부해 보고 싶은데, 참고할 자료가 있을까요?',
@@ -165,11 +192,17 @@ export const SCENES: Scene[] = [
         badWhy: '시험에만 관심 있는 것처럼 들려서 질문의 의도가 가벼워 보였어요.',
         better: '이 부분 더 공부해 보고 싶은데, 참고할 자료가 있을까요?',
         goodReply: '좋은 질문이에요. 다음 주에 논문 하나 보내 줄게요.',
+        midReply: '어떤 부분이요?',
         badReply: '…시험이 그렇게 궁금해요?',
+        views: [
+          { who: '선배에게', meaning: '"이 부분 더 보고 싶은데 추천해 줄 자료 있어요?" 정도로 편하게 해도 돼요.', cue: '거리가 가까운 관계' },
+          { who: '까탈 교수님에게', meaning: '어느 부분인지 페이지까지 짚어 말하면 더 좋아해요.', cue: '구체성이 단서' },
+        ],
       },
     ],
   },
 ];
+export const lineFor = (t: Turn, p: PersonaId): Line => ({ line: t.line, action: t.action, cues: t.cues, ...(t.byPersona?.[p] ?? {}) });
 export const sceneById = (id: string) => SCENES.find((s) => s.id === id) ?? SCENES[0];
 export const sceneForChar = (c: CharId) => SCENES.find((s) => s.char === c) ?? SCENES[0];
 
@@ -183,12 +216,27 @@ export const LANGS = [
   { id: 'ko', name: '한국어', ko: '한국어' },
 ];
 
-export const EPISODES = [
-  { no: 1, title: '첫 카페 데이트', state: 'done', badge: '완료 · A-' },
-  { no: 2, title: '주말 약속 정하기', state: 'now', badge: '진행 중 2/5', scene: 'seoyun-weekend' },
-  { no: 3, title: '기념일을 깜빡했다', state: 'locked', badge: '구독하면 열림' },
-  { no: 4, title: '친구들한테 소개하기', state: 'locked', badge: '구독하면 열림' },
-] as const;
+export type Sub = { id: string; title: string; state: 'done' | 'now' | 'open' | 'locked'; grade?: string; scene?: string };
+export type Chapter = { no: number; title: string; desc: string; locked: boolean; subs: Sub[] };
+export const CHAPTERS: Chapter[] = [
+  { no: 1, title: '첫 만남', desc: '처음 만난 날, 어색함 깨기', locked: false, subs: [
+    { id: '1-1', title: '카페 가기', state: 'done', grade: 'A-' },
+    { id: '1-2', title: '영화 보기', state: 'done', grade: 'B' },
+  ] },
+  { no: 2, title: '주말 데이트', desc: '약속 잡고, 취향 맞추기', locked: false, subs: [
+    { id: '2-1', title: '약속 정하기', state: 'now', scene: 'seoyun-weekend' },
+    { id: '2-2', title: '전시 보러 가기', state: 'open', scene: 'seoyun-weekend' },
+    { id: '2-3', title: '저녁 메뉴 고르기', state: 'open', scene: 'seoyun-weekend' },
+  ] },
+  { no: 3, title: '기념일', desc: '깜빡한 기념일 수습하기', locked: true, subs: [
+    { id: '3-1', title: '늦은 사과', state: 'locked' },
+    { id: '3-2', title: '서프라이즈 준비', state: 'locked' },
+  ] },
+  { no: 4, title: '친구 소개', desc: '내 친구들과 처음 만나는 자리', locked: true, subs: [
+    { id: '4-1', title: '인사하기', state: 'locked' },
+    { id: '4-2', title: '분위기 맞추기', state: 'locked' },
+  ] },
+];
 
 export const WARDROBE = {
   옷: [
