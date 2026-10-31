@@ -1,0 +1,39 @@
+{
+  "name": "malo",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo-google-fonts/black-han-sans": "^0.4.1",
+    "@expo-google-fonts/noto-sans-kr": "^0.4.4",
+    "@expo/metro-runtime": "~58.0.16",
+    "@expo/vector-icons": "^15.0.3",
+    "expo": "~58.0.22",
+    "expo-asset": "~58.0.19",
+    "expo-audio": "~58.0.11",
+    "expo-constants": "~58.0.14",
+    "expo-font": "~58.0.11",
+    "expo-haptics": "~58.0.7",
+    "expo-linking": "~58.0.15",
+    "expo-router": "~58.0.29",
+    "expo-speech": "~58.0.3",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-web": "~0.21.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

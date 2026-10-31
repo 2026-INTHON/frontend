@@ -1,0 +1,149 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle, Modal, Image } from 'react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { C, F, R } from '../lib/theme';
+import { useStore } from '../lib/store';
+
+export function T({ children, s, style, ...rest }: { children: React.ReactNode; s?: keyof typeof ts; style?: TextStyle | TextStyle[]; numberOfLines?: number }) {
+  return (
+    <Text style={[ts.base, s ? ts[s] : null, style as TextStyle]} {...rest}>
+      {children}
+    </Text>
+  );
+}
+const ts = StyleSheet.create({
+  base: { fontFamily: F.r, fontSize: 14, color: C.ink },
+  h1: { fontFamily: F.b, fontSize: 24, lineHeight: 32 },
+  h2: { fontFamily: F.b, fontSize: 20, lineHeight: 28 },
+  h3: { fontFamily: F.b, fontSize: 17, lineHeight: 24 },
+  body: { fontFamily: F.r, fontSize: 15, lineHeight: 22 },
+  sub: { fontFamily: F.r, fontSize: 13, lineHeight: 19, color: C.sub },
+  small: { fontFamily: F.m, fontSize: 12, color: C.sub },
+  label: { fontFamily: F.b, fontSize: 13 },
+});
+
+type BtnProps = { label: string; onPress?: () => void; icon?: keyof typeof Feather.glyphMap; kind?: 'dark' | 'lime' | 'line' | 'ghost'; style?: ViewStyle; disabled?: boolean; small?: boolean };
+export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, small }: BtnProps) {
+  const bg = kind === 'dark' ? C.ink : kind === 'lime' ? C.lime : kind === 'line' ? C.white : 'transparent';
+  const fg = kind === 'dark' ? C.white : C.ink;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        { height: small ? 44 : 56, borderRadius: R.btn, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 18, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
+        kind === 'line' && { borderWidth: 1, borderColor: C.line },
+        style,
+      ]}
+    >
+      <Text style={{ fontFamily: F.b, fontSize: small ? 14 : 16, color: fg }}>{label}</Text>
+      {icon ? <Feather name={icon} size={18} color={kind === 'dark' ? C.lime : C.ink} /> : null}
+    </Pressable>
+  );
+}
+
+export function Chip({ label, on, onPress, style, dark }: { label: string; on?: boolean; onPress?: () => void; style?: ViewStyle; dark?: boolean }) {
+  return (
+    <Pressable onPress={onPress} style={[{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill, backgroundColor: on ? C.ink : dark ? C.bg : C.white, borderWidth: on ? 0 : 1, borderColor: C.line }, style]}>
+      <Text style={{ fontFamily: on ? F.b : F.m, fontSize: 13, color: on ? C.white : C.ink }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+export function Tag({ label, tone = 'grey' }: { label: string; tone?: 'grey' | 'lime' | 'dark' | 'red' | 'white' }) {
+  const bg = { grey: C.bg, lime: C.lime, dark: C.ink, red: C.red, white: C.white }[tone];
+  const fg = tone === 'dark' || tone === 'red' ? C.white : C.ink;
+  return (
+    <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: R.pill, backgroundColor: bg }}>
+      <Text style={{ fontFamily: F.b, fontSize: 11, color: fg }}>{label}</Text>
+    </View>
+  );
+}
+
+export function Screen({ children, bg = C.bg, style, pad = true }: { children: React.ReactNode; bg?: string; style?: ViewStyle; pad?: boolean }) {
+  const ins = useSafeAreaInsets();
+  return <View style={[{ flex: 1, backgroundColor: bg, paddingTop: ins.top + 8, paddingBottom: pad ? ins.bottom + 12 : 0 }, style]}>{children}</View>;
+}
+
+export function IconBtn({ name, onPress, bg = C.white, color = C.ink, size = 40 }: { name: keyof typeof Feather.glyphMap; onPress?: () => void; bg?: string; color?: string; size?: number }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Feather name={name} size={size * 0.45} color={color} />
+    </Pressable>
+  );
+}
+
+export function Coin({ n, size = 14 }: { n?: number | string; size?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <View style={{ width: size + 2, height: size + 2, borderRadius: 99, backgroundColor: C.lime, borderWidth: 1.5, borderColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontFamily: F.k, fontSize: size * 0.6, color: C.ink, lineHeight: size * 0.8 }}>M</Text>
+      </View>
+      {n != null ? <Text style={{ fontFamily: F.b, fontSize: size }}>{typeof n === 'number' ? n.toLocaleString() : n}</Text> : null}
+    </View>
+  );
+}
+
+export function CoinPill() {
+  const { coins } = useStore();
+  return (
+    <View style={{ backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 7 }}>
+      <Coin n={coins} />
+    </View>
+  );
+}
+
+export function TopBar({ title, right, onBack }: { title?: string; right?: React.ReactNode; onBack?: () => void }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, height: 48, gap: 12 }}>
+      <IconBtn name="chevron-left" onPress={onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/home')))} />
+      {title ? <T s="h2" style={{ flex: 1 }}>{title}</T> : <View style={{ flex: 1 }} />}
+      {right}
+    </View>
+  );
+}
+
+export function Card({ children, style, onPress }: { children: React.ReactNode; style?: ViewStyle | ViewStyle[]; onPress?: () => void }) {
+  const st = [{ backgroundColor: C.white, borderRadius: R.card, padding: 16 }, style as ViewStyle];
+  return onPress ? (
+    <Pressable onPress={onPress} style={({ pressed }) => [...st, { opacity: pressed ? 0.9 : 1 }]}>
+      {children}
+    </Pressable>
+  ) : (
+    <View style={st}>{children}</View>
+  );
+}
+
+export function Sheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
+  const ins = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: C.dim }} onPress={onClose} />
+      <View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20 }}>
+        <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: C.line, marginTop: -12, marginBottom: 16 }} />
+        {children}
+      </View>
+    </Modal>
+  );
+}
+
+export function Hearts({ n, max = 3 }: { n: number; max?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
+      <T s="small" style={{ color: C.ink }}>체력</T>
+      {Array.from({ length: max }).map((_, i) => (
+        <Ionicons key={i} name="heart" size={15} color={i < n ? C.ink : C.line} />
+      ))}
+    </View>
+  );
+}
+
+export function Avatar({ src, size = 64 }: { src: any; size?: number }) {
+  return (
+    <View style={{ width: size, height: size, borderRadius: 16, backgroundColor: '#F8F8F9', overflow: 'hidden' }}>
+      <Image source={src} style={{ width: size * 1.6, height: size * 2.4, marginLeft: -size * 0.3, marginTop: -size * 0.08 }} resizeMode="cover" />
+    </View>
+  );
+}
