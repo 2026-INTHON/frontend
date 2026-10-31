@@ -38,6 +38,14 @@ test('Failed scene creation clears the in-flight entry so retry can succeed',asy
  let starts=0;const {api}=setup(async()=>++starts===1?Response.json({error:{message:'wait'}},{status:429}):Response.json({id:'retried'}),{accessToken:'token'});
  await assert.rejects(api.start('scene',{}));assert.equal((await api.start('scene',{})).id,'retried');assert.equal(starts,2);
 });
+test('A temporary refresh failure preserves the login for retry',async()=>{
+ let refreshes=0;const {api}=setup(async(path,init)=>{
+  assert.notEqual(path,'/auth/guest');
+  if(path==='/auth/refresh')return ++refreshes===1?Response.json({error:{message:'unavailable'}},{status:503}):Response.json({accessToken:'new',refreshToken:'rotated'});
+  return init.headers.Authorization==='Bearer old'?Response.json({error:{message:'expired'}},{status:401}):Response.json({ok:true});
+ },{accessToken:'old',refreshToken:'kept',user:{isGuest:false}});
+ await assert.rejects(api.get('/me'));assert.equal((await api.get('/me')).ok,true);assert.equal(refreshes,2);
+});
 test('Concurrent token readers wait for native storage before creating auth requests',async()=>{
  let reads=0;const gate=deferred();
  const context=vm.createContext({Platform:{OS:'ios'},SecureStore:{getItemAsync:()=>{reads++;return gate.promise;},setItemAsync:async()=>{},deleteItemAsync:async()=>{}}});

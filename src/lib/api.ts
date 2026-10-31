@@ -152,7 +152,10 @@ async function call<T>(path: string, init: RequestInit = {}, auth = true, timeou
   } catch (e) {
     if (!(e instanceof ApiError) || e.status !== 401) throw e;
     const current = await getTokens();
-    let next = current && current.accessToken !== tk.accessToken ? current : await refresh().catch(() => null);
+    let next = current && current.accessToken !== tk.accessToken ? current : await refresh().catch(error => {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error; // A temporary network/server error must not erase a real login.
+    });
     if (!next) {
       await setTokens(null);
       if (!tk.user?.isGuest) {
