@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Btn, Card, CoinPill, IconBtn, T, Tag } from '../../components/ui';
 import { C, F } from '../../lib/theme';
-import { CharId, IMG, PERSONAS, PLACE_OF, PersonaId, charById, sceneForChar } from '../../lib/data';
-import { useStore } from '../../lib/store';
+import { CharId, IMG, PERSONAS, PLACE_OF, PersonaId, charById, sceneById, sceneForChar } from '../../lib/data';
+import { LastPlayed, useStore } from '../../lib/store';
 import { useAccount } from '../../lib/useAccount';
-import { resolveTodayScene } from '../../lib/engine';
-import { CharacterProfileOverlay } from '../../components/character-profile';
+import { localizedSceneTitle, resolveTodayScene } from '../../lib/engine';
+import { CharacterTraitsSheet } from '../../components/character-traits';
 import { tr, useT } from '../../lib/i18n';
 import { demoBrief } from '../../lib/demo-briefings';
 
@@ -17,29 +17,26 @@ import { demoBrief } from '../../lib/demo-briefings';
 export default function Home() {
   const st = useStore();
   const acc = useAccount();
-  const [profile, setProfile] = useState({ key: '', open: false });
+  const [info, setInfo] = useState(false); // ⋯ 자세한 특성
   const ins = useSafeAreaInsets();
   const t = useT();
   // 캐릭터를 바꿨으면 그 캐릭터 기준으로 (이전 캐릭터의 이어하기는 숨겨요)
   const lp = st.lastPlayed && st.lastPlayed.char === st.char && st.lastPlayed.persona === st.persona ? st.lastPlayed : null;
   const charId = st.char;
   const personaId = lp?.persona ?? st.persona;
-  const profileKey = `${charId}-${personaId}`;
-  if (profile.key !== profileKey) setProfile({ key: profileKey, open: false });
-  const profileOpen = profile.key === profileKey && profile.open;
-  const setProfileOpen = useCallback((open: boolean) => setProfile({ key: profileKey, open }), [profileKey]);
   const c = charById(charId);
   const p = PERSONAS[charId].find((x) => x.id === personaId) ?? PERSONAS[charId][2];
   const today = useToday(st.demo, charId, personaId, st.pack, st.lang, !lp);
+  const lpTitle = useLastTitle(st.demo, lp, st.pack, st.lang);
 
   // 이어갈 장면과 버튼 이름을 실제 상태에 맞춰요
   const next =
     lp?.status === 'done'
       ? lp.nextSceneId
-        ? { id: lp.nextSceneId, tag: t('다음 장면'), title: t('다음 장면'), sub: t('지난번: {title} 완료', { title: lp.title || t('장면') }), btn: t('다음 장면 시작') }
-        : { id: lp.sceneId, tag: t('다시 하기'), title: lp.title || t('방금 한 장면'), sub: t('완료했어요 · 한 번 더 연습해 볼까요?'), btn: t('다시 하기') }
+        ? { id: lp.nextSceneId, tag: t('다음 장면'), title: t('다음 장면'), sub: t('지난번: {title} 완료', { title: lpTitle || t('장면') }), btn: t('다음 장면 시작') }
+        : { id: lp.sceneId, tag: t('다시 하기'), title: lpTitle || t('방금 한 장면'), sub: t('완료했어요 · 한 번 더 연습해 볼까요?'), btn: t('다시 하기') }
       : lp
-        ? { id: lp.sceneId, tag: t('이어하기'), title: lp.title || t('하던 장면'), sub: lp.progress ? '' : t('하던 장면이 있어요'), btn: t('이어하기') }
+        ? { id: lp.sceneId, tag: t('이어하기'), title: lpTitle || t('하던 장면'), sub: lp.progress ? '' : t('하던 장면이 있어요'), btn: t('이어하기') }
         : { id: today.sceneId ?? 'today', tag: t('오늘의 장면'), title: today.title ?? (today.loading ? t('장면 불러오는 중…') : t('오늘의 장면')), sub: today.err ? t(today.err) : t('첫 장면을 시작해 볼까요?'), btn: t('시작하기') };
   const name = acc.user && !acc.user.isGuest && acc.user.displayName && acc.user.displayName !== '게스트' && acc.user.displayName !== 'Guest' ? acc.user.displayName : null;
   // 진행률: "2/5 대사" → 0.4 (끝낸 장면은 꽉 채움)
@@ -69,11 +66,13 @@ export default function Home() {
       {/* 오늘의 장면 / 이어하기 */}
       <View style={{ flex: 1, minHeight: 300, marginHorizontal: 24, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
         <Image source={IMG.bg[PLACE_OF[charId]]} style={{ position: 'absolute', width: '100%', height: '100%' }} resizeMode="cover" />
-        {/* 사진 위에 정보 카드가 겹치는 홈 구성. 프로필은 위쪽 사진 영역에서만 펼쳐져요. */}
+        {/* 사진 위에 정보 카드가 겹치는 홈 구성. 오른쪽 위 ⋯ 는 캐릭터 자세한 특성(바텀시트) */}
         <Image source={IMG.char[charId]} style={{ position: 'absolute', top: 18, left: '31%', width: '62%', height: '96%' }} resizeMode="contain" />
         <View style={{ flex: 1, minHeight: 190 }}>
-          <Pressable onPress={go} disabled={profileOpen} accessible={!profileOpen} aria-hidden={profileOpen} accessibilityElementsHidden={profileOpen} importantForAccessibility={profileOpen ? 'no-hide-descendants' : 'auto'} accessibilityRole="button" accessibilityLabel={`${next.tag}: ${next.title}`} style={{ flex: 1 }} />
-          <CharacterProfileOverlay key={`${charId}-${personaId}`} char={charId} persona={personaId} open={profileOpen} onOpenChange={setProfileOpen} />
+          <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={`${next.tag}: ${next.title}`} style={{ flex: 1 }} />
+          <View style={{ position: 'absolute', top: 14, right: 14 }}>
+            <IconBtn name="more-horizontal" size={44} label={t('{name} 자세한 특성', { name: t(c.name) })} onPress={() => setInfo(true)} />
+          </View>
         </View>
         <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={t('{title} 시작', { title: next.title })} style={{ marginHorizontal: 12, marginBottom: 12, backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 6 }}>
           <Tag label={next.tag} tone="dark" />
@@ -93,6 +92,7 @@ export default function Home() {
       <View style={{ paddingHorizontal: 24, paddingVertical: 10, backgroundColor: C.bg }}>
         <Btn label={next.btn} icon="play" onPress={go} />
       </View>
+      <CharacterTraitsSheet char={info ? charId : null} persona={personaId} lang={st.lang} onClose={() => setInfo(false)} />
     </View>
   );
 }
@@ -117,6 +117,34 @@ function useToday(demo: boolean, char: CharId, persona: PersonaId, pack: 'ko' | 
   }
   const cur = s?.key === key ? s : null;
   return { sceneId: cur?.sceneId, title: cur?.title, err: cur?.err, loading: need && !cur };
+}
+
+// 이어하기 제목: 저장할 때 언어와 지금 언어가 다르면(언어를 바꿨으면) 지금 언어 제목을 다시 찾아요.
+// 찾는 동안은 '' (화면은 '하던 장면' 같은 기본 문구), 못 찾으면 저장된 제목 그대로.
+function useLastTitle(demo: boolean, lp: LastPlayed | null, pack: 'ko' | 'en', language: string): string {
+  const char = lp?.char;
+  const sceneId = lp?.sceneId;
+  const stale = !!lp && lp.lang !== language;
+  const key = `${char}-${sceneId}-${pack}-${language}`;
+  const [s, setS] = useState<{ key: string; title: string | null } | null>(null);
+  useEffect(() => {
+    if (!char || !sceneId || !stale || demo) return;
+    let alive = true;
+    localizedSceneTitle(char, sceneId, pack, language)
+      .then((title) => alive && setS({ key, title }))
+      .catch(() => alive && setS({ key, title: null }));
+    return () => {
+      alive = false;
+    };
+  }, [demo, char, sceneId, stale, pack, language, key]);
+  if (!lp) return '';
+  if (!stale) return lp.title;
+  if (demo) {
+    const sc = sceneById(lp.sceneId);
+    return sc ? demoBrief(sc.id, language)?.title ?? tr(language, sc.title) : lp.title;
+  }
+  const cur = s?.key === key ? s : null;
+  return cur ? cur.title ?? lp.title : '';
 }
 
 function Tile({ icon, t, s, onPress }: { icon: keyof typeof Feather.glyphMap; t: string; s: string; onPress: () => void }) {
