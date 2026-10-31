@@ -153,7 +153,6 @@ export const FRAME = { flex: 1, width: '100%' as const, maxWidth: 430, alignSelf
 export function Hearts({ n, max = 3 }: { n: number; max?: number }) {
   return (
     <View accessible accessibilityLabel={`체력 ${n}/${max}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
-      <T s="small" style={{ color: C.ink }}>체력</T>
       {Array.from({ length: max }).map((_, i) => (
         <Ionicons key={i} name="heart" size={15} color={i < n ? C.ink : C.line} />
       ))}

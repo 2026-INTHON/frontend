@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Btn, Card, CoinPill, IconBtn, T, Tag } from '../../components/ui';
-import { C } from '../../lib/theme';
+import { C, F } from '../../lib/theme';
 import { CharId, IMG, PERSONAS, PLACE_OF, PersonaId, charById, sceneForChar } from '../../lib/data';
 import { useStore } from '../../lib/store';
 import { useAccount } from '../../lib/useAccount';
@@ -36,49 +36,57 @@ export default function Home() {
         ? { id: lp.nextSceneId, tag: '다음 장면', title: '다음 장면', sub: `지난번: ${lp.title || '장면'} 완료`, btn: '다음 장면 시작' }
         : { id: lp.sceneId, tag: '다시 하기', title: lp.title || '방금 한 장면', sub: '완료했어요 · 한 번 더 연습해 볼까요?', btn: '다시 하기' }
       : lp
-        ? { id: lp.sceneId, tag: '이어하기', title: lp.title || '하던 장면', sub: lp.progress ? `${lp.progress}까지 했어요` : '하던 장면이 있어요', btn: '이어하기' }
+        ? { id: lp.sceneId, tag: '이어하기', title: lp.title || '하던 장면', sub: lp.progress ? '' : '하던 장면이 있어요', btn: '이어하기' }
         : { id: today.sceneId ?? 'today', tag: '오늘의 장면', title: today.title ?? (today.loading ? '장면 불러오는 중…' : '오늘의 장면'), sub: today.err ?? '첫 장면을 시작해 볼까요?', btn: '시작하기' };
   const name = acc.user && !acc.user.isGuest && acc.user.displayName && acc.user.displayName !== '게스트' ? acc.user.displayName : null;
+  // 진행률: "2/5 대사" → 0.4 (끝낸 장면은 꽉 채움)
+  const m = lp?.progress?.match(/(\d+)\s*\/\s*(\d+)/);
+  const frac = lp?.status === 'done' ? 1 : m ? Math.min(1, Number(m[1]) / Number(m[2])) : null;
   const go = () => router.push({ pathname: '/scene/[id]', params: { id: next.id } });
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: Math.max(ins.top, 12) + 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, gap: 8 }}>
+    <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: Math.max(ins.top, 12) + 16 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 28, gap: 8 }}>
         <T s="h2" style={{ flex: 1 }}>{name ? `${name}님, 오늘도 한 장면만` : '오늘도 한 장면만 해 볼까요?'}</T>
         <IconBtn name="settings" size={36} onPress={() => router.push('/settings')} />
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, marginTop: 8, gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 28, marginTop: 8, gap: 8 }}>
         {st.streak > 0 ? <Tag label={`🔥 연속 ${st.streak}일`} tone="white" /> : <Tag label="오늘 첫 장면을 끝내면 연속 1일" tone="white" />}
-        {st.demo ? <Tag label="예시 대화 체험 중" tone="grey" /> : null}
+        {st.demo ? <Tag label="체험 중" tone="grey" /> : null}
         <View style={{ flex: 1 }} />
         <CoinPill />
       </View>
 
       {/* 오늘의 장면 / 이어하기 */}
-      <View style={{ flex: 1, marginHorizontal: 24, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
+      <View style={{ flex: 1, marginHorizontal: 28, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
         <Image source={IMG.bg[PLACE_OF[charId]]} style={{ position: 'absolute', width: '100%', height: '100%' }} resizeMode="cover" />
-        {/* 캐릭터는 아래 정보 칸 위쪽 공간에 전신이 다 보이게 (신발까지) */}
-        <View style={{ flex: 1 }}>
-          <Pressable onPress={go} disabled={profileOpen} accessible={!profileOpen} aria-hidden={profileOpen} accessibilityElementsHidden={profileOpen} importantForAccessibility={profileOpen ? 'no-hide-descendants' : 'auto'} accessibilityRole="button" accessibilityLabel={`${next.tag}: ${next.title}`} style={{ flex: 1 }}>
-            <Image source={IMG.char[charId]} style={{ flex: 1, width: '56%', height: undefined, marginLeft: '34%', marginTop: 18, marginBottom: 6 }} resizeMode="contain" />
-          </Pressable>
-          <View style={{ position: 'absolute', top: 14, left: 14 }}>
-            <Tag label={next.tag} tone="lime" />
-          </View>
+        {/* 캐릭터는 크게, 아래쪽은 정보 칸 뒤로 살짝 들어가요 */}
+        <Pressable onPress={go} disabled={profileOpen} accessible={!profileOpen} aria-hidden={profileOpen} accessibilityElementsHidden={profileOpen} importantForAccessibility={profileOpen ? 'no-hide-descendants' : 'auto'} accessibilityRole="button" accessibilityLabel={`${next.tag}: ${next.title}`} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+          <Image source={IMG.char[charId]} style={{ position: 'absolute', top: '6%', left: '28%', width: '60%', height: '94%' }} resizeMode="contain" />
+        </Pressable>
+        <View style={{ flex: 1 }} pointerEvents="box-none">
           <CharacterProfileOverlay key={`${charId}-${personaId}`} char={charId} persona={personaId} open={profileOpen} onOpenChange={setProfileOpen} />
         </View>
-        <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={`${next.title} 시작`} style={{ marginHorizontal: 12, marginBottom: 12, backgroundColor: C.white, borderRadius: 18, padding: 14 }}>
-          <T s="small">{c.name} · {p.name}</T>
-          <T s="h3">{next.title}</T>
-          <T s="sub">{next.sub}</T>
+        <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={`${next.title} 시작`} style={{ marginHorizontal: 12, marginBottom: 12, backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Tag label={next.tag} tone="dark" />
+            {lp?.progress && lp.status !== 'done' ? <T s="small" style={{ fontFamily: F.b }}>{lp.progress}</T> : null}
+          </View>
+          <T s="h2" style={{ marginTop: 4 }}>{next.title}</T>
+          <T s="sub" numberOfLines={1}>{c.name} · {p.name}{next.sub ? ` · ${next.sub}` : ''}</T>
+          {frac != null ? (
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: C.bg, marginTop: 8, overflow: 'hidden' }} accessibilityLabel={`진행 ${Math.round(frac * 100)}%`}>
+              <View style={{ width: `${Math.round(frac * 100)}%`, height: 6, borderRadius: 3, backgroundColor: C.ink }} />
+            </View>
+          ) : null}
         </Pressable>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 24, marginTop: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 28, marginTop: 12 }}>
         <Tile icon="grid" t="다른 장면" s="챕터 목록" onPress={() => router.push('/episodes')} />
-        <Tile icon="user" t="대화 상대 바꾸기" s="캐릭터 목록" onPress={() => router.push('/characters')} />
+        <Tile icon="user" t="대화 상대" s="캐릭터 목록" onPress={() => router.push('/characters')} />
       </View>
-      <View style={{ paddingHorizontal: 24, paddingVertical: 12 }}>
+      <View style={{ paddingHorizontal: 28, paddingVertical: 12 }}>
         <Btn label={next.btn} icon="play" onPress={go} />
       </View>
     </View>

@@ -425,12 +425,12 @@ export default function SceneScreen() {
 
       {/* 속마음 돋보기 */}
       {phase !== 'brief' && ready ? (
-        <Pressable onPress={openHint} accessibilityRole="button" accessibilityLabel="힌트 보기" style={{ position: 'absolute', right: 24, top: ins.top + 200, alignItems: 'center', gap: 4 }}>
+        <Pressable onPress={openHint} accessibilityRole="button" accessibilityLabel="속마음 보기" style={{ position: 'absolute', right: 24, top: ins.top + 200, alignItems: 'center', gap: 4 }}>
           <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center', borderWidth: hintNudge ? 3 : 0, borderColor: C.lime }}>
             <Feather name="search" size={22} color={C.lime} />
           </View>
           <View style={{ backgroundColor: hintNudge ? C.lime : C.white, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
-            <T s="label" style={{ fontSize: 11 }}>힌트 보기</T>
+            <T s="label" style={{ fontSize: 11 }}>속마음</T>
           </View>
         </Pressable>
       ) : null}
@@ -460,7 +460,7 @@ export default function SceneScreen() {
           ) : null}
           {sendErr && !judging ? (
             <View style={{ backgroundColor: C.white, borderRadius: 16, padding: 12, gap: 8 }}>
-              <T s="label">{sendErr} 체력은 그대로예요.</T>
+              <T s="label">{sendErr}</T>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Btn label="다시 보내기" small icon="rotate-cw" style={{ flex: 1 }} onPress={() => send(answer, phase === 'recognized')} />
                 <Btn label="고쳐서 말하기" small kind="line" style={{ flex: 1 }} onPress={() => { setSendErr(null); setText(answer); setPhase('typing'); }} />
@@ -478,7 +478,7 @@ export default function SceneScreen() {
             <Pressable onPress={() => setDetail(true)} accessibilityRole="button" accessibilityLabel={`피드백 자세히: ${out.label}`} style={{ backgroundColor: C.white, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <ReactionBadge mark={out.mark} size={24} />
               <View style={{ flex: 1 }}>
-                <T s="label" numberOfLines={1}>{out.native ? '한국어로 다시 말해 보세요' : out.label}{out.lifeDelta < 0 ? ' · 체력 -1' : ''}</T>
+                <T s="label" numberOfLines={1}>{out.native ? '한국어로 다시 말해 보세요' : out.label}</T>
                 {(out.ok ? out.tip : out.native ? out.better : out.why) ? <T s="small" numberOfLines={1}>{out.ok ? out.tip : out.native ? `"${out.better}"` : out.why}</T> : null}
               </View>
               {out.done && movesOn(out) ? (
@@ -594,7 +594,7 @@ export default function SceneScreen() {
                 <Brief k="상대" v={scene.partner || `${ch.call} · ${persona.name} · ${persona.short}`} />
                 <Brief k="상황" v={scene.situation} sub={E?.brief.translation?.situation} />
                 <Brief k="이번 목표" v={scene.goal} sub={E?.brief.translation?.goal} />
-                {st.demo ? <T s="small">예시 대화 체험 중</T> : null}
+                {st.demo ? <T s="small">체험 중</T> : null}
                 <Btn label="대화 시작" icon="play" onPress={begin} />
               </>
             )}
@@ -609,10 +609,8 @@ export default function SceneScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <ReactionBadge mark={out.mark} size={28} />
               <T s="label">{out.label}</T>
-              <View style={{ flex: 1 }} />
-              {out.lifeDelta < 0 ? <T s="small" style={{ color: C.red, fontFamily: F.b }}>체력 -1</T> : <T s="small">체력은 그대로예요</T>}
             </View>
-            <T s="h2">{out.native ? '한국어로는 이렇게 말해요' : out.mark === '?' ? '무슨 뜻인지 잘 모르겠대요' : out.mark === '△' ? `${ch.name}${josa(ch.name)} 고개를 갸웃해요` : `${ch.name} 표정이 굳었어요`}</T>
+            <T s="h2">{out.native ? '한국어로는 이렇게 말해요' : out.mark === '?' ? '못 알아들었대요' : out.mark === '△' ? `${ch.name}${josa(ch.name)} 고개를 갸웃해요` : `${ch.name} 표정이 굳었어요`}</T>
             <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
               <T s="small">내 답</T>
               <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
