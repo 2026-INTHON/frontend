@@ -18,7 +18,7 @@ export default function Mistakes() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: ins.top + 8 }}>
       <View style={{ paddingHorizontal: 24 }}>
-        <T s="h1">오답 도감</T>
+        <T s="h1">복습 노트</T>
         <T s="sub">말실수 {mistakes.length}개 · 다시 연습해서 고친 것 {fixed}개</T>
       </View>
       {mistakes.length ? (
@@ -31,8 +31,7 @@ export default function Mistakes() {
       <ScrollView contentContainerStyle={{ padding: 24, gap: 12 }}>
         {!mistakes.length ? (
           <Card style={{ gap: 8 }}>
-            <T s="h3">아직 모은 말실수가 없어요</T>
-            <T s="sub">대화하다 X를 받은 말이 여기에 모여요. 더 나은 말과 이유도 같이 저장돼요.</T>
+            <T s="h3">아직 복습할 표현 없음</T>
           </Card>
         ) : null}
         {list.map((m) => (
@@ -44,7 +43,7 @@ export default function Mistakes() {
             </View>
             <T s="body" style={{ marginTop: 8, color: C.red, textDecorationLine: 'line-through' }}>"{m.said}"</T>
             <T s="body" style={{ marginTop: 4 }}>"{m.better}"</T>
-            {!m.fixed ? <Btn label="다시 연습" small kind="line" style={{ alignSelf: 'flex-start', marginTop: 10 }} onPress={() => router.push({ pathname: '/mistake/[id]', params: { id: m.id } })} /> : null}
+            {!m.fixed ? <Btn label="다시 연습하기" small kind="line" style={{ alignSelf: 'flex-start', marginTop: 10 }} onPress={() => router.push({ pathname: '/mistake/[id]', params: { id: m.id } })} /> : null}
           </Card>
         ))}
       </ScrollView>

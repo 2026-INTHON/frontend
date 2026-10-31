@@ -21,8 +21,7 @@ export default function Pack() {
       <TopBar />
       {/* 작은 화면에서도 선택지가 버튼에 가리지 않게 본문만 스크롤 */}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 24, gap: 12 }}>
-        <T s="h1">어떤 말을 연습할까요?</T>
-        <T s="sub" style={{ marginBottom: 4 }}>상황 속 캐릭터와 대화하며 뉘앙스를 익혀요</T>
+        <T s="h1">어떤 언어를 연습할까요?</T>
         {PACKS.map((p) => {
           const on = sel === p.id;
           return (

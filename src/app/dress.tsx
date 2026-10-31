@@ -32,7 +32,7 @@ export default function Dress() {
   }
 
   return (
-    <ImageBackground source={IMG.bg[bgPlace]} style={{ flex: 1 }} resizeMode="cover">
+    <ImageBackground source={IMG.bg[bgPlace]} style={{ flex: 1, width: '100%' }} imageStyle={{ width: '100%', height: '100%' }} resizeMode="cover">
       <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(238,230,219,0.3)' } as any} />
       <Image source={IMG.char[id]} style={{ position: 'absolute', top: ins.top + 70, alignSelf: 'center', width: '66%', height: '78%' }} resizeMode="contain" />
       <View style={{ paddingTop: ins.top + 8, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -76,7 +76,7 @@ export default function Dress() {
           <Coin n={`보유 ${st.coins}`} size={13} />
         </View>
         <T s="label" style={{ marginTop: 18, marginBottom: 6 }}>무료로 모으기</T>
-        {[['장면 하나 끝내기', '+30'], ['매일 출석', '+10'], ['오답 다시 연습하기', '+5']].map(([k, v]) => (
+        {[['장면 하나 끝내기', '+30'], ['매일 출석', '+10'], ['복습 표현 다시 연습하기', '+5']].map(([k, v]) => (
           <View key={k} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
             <T style={{ flex: 1 }}>{k}</T>
             <Coin n={v} size={12} />

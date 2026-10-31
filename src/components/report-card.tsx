@@ -97,7 +97,7 @@ export function ReportCard({ sessionId }: { sessionId: string }) {
       {sm.overallFeedback ? <T s="sub" style={{ color: C.ink }}>{sm.overallFeedback}</T> : null}
       <Bullets t="잘한 점" items={sm.strengths} />
       <Bullets t="더 좋아질 점" items={sm.improvements} />
-      <Bullets t="문화 포인트" items={sm.culturalTakeaways} />
+      <Bullets t="문화 팁" items={sm.culturalTakeaways} />
       {r.details?.length ? (
         <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: C.ink, borderRadius: 14, padding: 12 }}>
           <Feather name="list" size={16} />
