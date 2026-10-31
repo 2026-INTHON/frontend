@@ -33,8 +33,8 @@ export default function Settings() {
         </Card>
         <T s="small" style={{ marginTop: 8 }}>발표·체험</T>
         <Card style={{ gap: 8 }}>
-          <Row k="데모 모드" right={<Toggle value={st.demo} onValueChange={(v) => st.setDemo(v)} />} />
-          <T s="small">켜면 앱 안 대본과 예시 판정으로 진행해요. 캐릭터 음성에는 인터넷이 필요해요. 실시간 AI 판정을 쓰려면 꺼 주세요.</T>
+          <Row k="예시 모드" right={<Toggle value={st.demo} onValueChange={(v) => st.setDemo(v)} />} />
+          <T s="small">발표용 예시 대화 사용</T>
         </Card>
         <T s="small" style={{ marginTop: 8 }}>알림</T>
         <Card style={{ gap: 14 }}>
@@ -62,7 +62,7 @@ export default function Settings() {
           ) : null}
         </Card>
         <Card style={{ gap: 6 }}>
-          <T s="small">일부 AI 음성은 Typecast 가상 성우 서비스로 제작했습니다. 사용 보이스: 아리, 예진, MBTI ET 여.</T>
+          <T s="small">일부 AI 음성은 Typecast 가상 성우 서비스로 제작했습니다. 사용 보이스: 아린, 예은, 나윤, 재선, 라연, 승연.</T>
           <T s="small">https://typecast.ai</T>
         </Card>
       </ScrollView>

@@ -19,8 +19,7 @@ export default function Lang() {
         <View style={{ marginTop: 8 }}>
           <Tag label={pack === 'ko' ? '한국어팩' : '영어팩'} tone="white" />
         </View>
-        <T s="h1" style={{ marginTop: 8 }}>모국어를 골라 주세요</T>
-        <T s="sub" style={{ marginBottom: 8 }}>힌트와 피드백을 이 언어로 알려 드려요</T>
+        <T s="h1" style={{ marginTop: 8 }}>힌트와 설명을 볼 언어</T>
         {LANGS.map((l) => {
           const dis = l.id === learning;
           const on = sel === l.id;

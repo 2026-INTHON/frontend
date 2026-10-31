@@ -4,7 +4,22 @@
 
 배포 시 정적 JS/에셋은 VM 공유 저장소에 이전 버전과 함께 보존한다. 앱 HTML은 no-store, 없는 정적 파일은 HTML 대신 404를 반환한다. Google 운영 Site URL과 `/auth/callback` 허용 주소도 실제 HTTPS 도메인을 사용한다.
 
-여자친구 음성은 Typecast SSFM 3.1을 사용한다. playful=아리, calm=예진, strict=MBTI ET 여이며 감정·반응에 맞는 프리셋과 강도를 AI가 고른다. `TYPECAST_API_KEY`는 BE·AI GitHub Actions Secrets에 보관하고 AI 서버에서만 사용한다. FE에는 키를 전달하지 않는다. 음성 캐시는 모델·목소리·성격·감정·반응을 구분한다.
+여자친구·교수 음성은 Typecast SSFM 3.1을 사용한다. 아래 조합으로 고정하며 감정은 같은 목소리의 프리셋·강도로 표현한다. `TYPECAST_API_KEY`는 BE·AI GitHub Actions Secrets에 보관하고 AI 서버에서만 사용한다. FE에는 키를 전달하지 않는다.
+
+| 캐릭터 | UI 성격 | FE / API 값 | 음성 |
+| --- | --- | --- | --- |
+| 여자친구 | 발랄 | tease / playful | 아린 |
+| 여자친구 | 까탈 | picky / strict | 예은 |
+| 여자친구 | 차분 | calm / calm | 나윤 |
+| 교수 | 기본 | calm / calm | 재선 |
+| 교수 | 까탈 | picky / strict | 라연 |
+| 교수 | 친절 | tease / playful | 승연 |
+
+기쁨→happy, 분노→angry, 슬픔→sad, 경멸→tonedown, 울먹임→sad 강도 증가. 혼란은 tonedown 강도를 낮춘다. 캐시 버전 `selected-voice-v2`와 목소리·감정을 함께 구분하므로 기존 대사도 새 음성 URL을 받는다. 음성을 영구 저장하지 말고 서버의 새 `audioUrl`을 사용하며 만료/재생 실패 시 `/speech`로 다시 받는다.
+
+2026-11-01 재진입 수정: 토큰 최초 로딩·게스트 생성·토큰 갱신은 동시에 여러 화면이 요청해도 한 번만 실행한다. 같은 장면·성격·자막 언어의 진행 중인 시작 요청을 공유하고, 떠난 화면의 늦은 응답은 폐기한다. 장면 시작은 자막·TTS 준비를 기다리도록 최대 120초를 허용하며 실패 시 사용자가 재시도한다. 이 시간은 실시간 답변의 3~5초 목표와 별개다.
+
+`GET /chapters`의 CH 0는 성격 3종을 합쳐 **한 에피소드**로 내려준다. 성격은 `/sessions`의 `personalityId`로 고른다. 과거 어떤 성격으로 완료했어도 완료 기록을 유지한다. 실제 커리큘럼·개인 생성 챕터를 제목으로 중복 제거하면 안 된다. BE는 조회·쓰기 요청 한도를 분리하고 429에 `Retry-After` 초와 기다릴 시간을 제공한다.
 
 데모에서 저장된 `seoyun-weekend` 같은 이어하기 링크는 live 진입 시 선택한 성격의 서버 예시 ID로 변환한다. 서버에서 받은 교육과정·개인 장면 ID는 그대로 사용한다.
 

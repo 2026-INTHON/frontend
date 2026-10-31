@@ -14,7 +14,7 @@ export default function PersonaCreate() {
   const [name, setName] = useState('우리 팀 최 팀장님');
   return (
     <Screen>
-      <TopBar title="페르소나 만들기" right={<Tag label={subscribed ? '이번 주 1회 남음' : '생성권 0장'} tone="lime" />} />
+      <TopBar title="나만의 캐릭터" right={<Tag label={subscribed ? '이번 주 1회 남음' : '생성권 0장'} tone="lime" />} />
       <ScrollView contentContainerStyle={{ padding: 24, gap: 10 }}>
         <T s="label">어떤 관계예요?</T>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -35,7 +35,7 @@ export default function PersonaCreate() {
         <T s="small" style={{ marginTop: 14 }}>✦ 구독하면 주 1회 무료, 아니면 생성권 1장으로 만들어요</T>
       </ScrollView>
       <View style={{ paddingHorizontal: 16 }}>
-        <Btn label="페르소나 만들기" icon="star" onPress={() => router.back()} />
+        <Btn label="캐릭터 만들기" icon="star" onPress={() => router.back()} />
       </View>
     </Screen>
   );

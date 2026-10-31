@@ -8,6 +8,7 @@ export type Tokens = { accessToken: string; refreshToken?: string; user?: MaloUs
 const KEY = 'malo.tokens';
 let mem: Tokens | null = null;
 let loaded = false;
+let loading: Promise<void> | null = null;
 
 const web = Platform.OS === 'web';
 async function read(): Promise<string | null> {
@@ -25,17 +26,14 @@ async function write(v: string | null) {
 
 export async function getTokens(): Promise<Tokens | null> {
   if (!loaded) {
-    loaded = true;
-    try {
-      const raw = await read();
-      mem = raw ? JSON.parse(raw) : null;
-    } catch {
-      mem = null;
-    }
+    loading ??= read().then(raw => { mem = raw ? JSON.parse(raw) : null; })
+      .catch(() => { mem = null; }).finally(() => { loaded = true; });
+    await loading;
   }
   return mem;
 }
 export async function setTokens(t: Tokens | null) {
+  await getTokens();
   mem = t;
   loaded = true;
   try {

@@ -61,7 +61,7 @@ export default function Episodes() {
         }));
         if (alive) setRes({ key, list: l });
       })
-      .catch(() => alive && setRes({ key, err: '에피소드를 불러오지 못했어요.' }));
+      .catch(() => alive && setRes({ key, err: '챕터를 불러오지 못했어요.' }));
     return () => {
       alive = false;
     };
@@ -77,17 +77,17 @@ export default function Episodes() {
   const c = charById(char);
   return (
     <Screen>
-      <TopBar title={`${c.name} · 에피소드`} />
+      <TopBar title={`${c.name} · 챕터`} />
       {/* 캐릭터 바꿔 보기 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 24, paddingVertical: 8 }}>
         {CHARACTERS.map((x) => (
-          <Chip key={x.id} label={`${x.name}${x.free || st.subscribed ? '' : ' 🔒'}`} on={x.id === char} onPress={() => { setChar(x.id); setOpen(null); }} />
+          <Chip key={x.id} label={`${x.name}${x.free || st.subscribed ? '' : ' 🔒'}`} on={x.id === char} onPress={() => { setChar(x.id); setOpen(null); if (x.free || st.subscribed) st.set({ char: x.id, persona: PERSONAS[x.id].some((p) => p.id === st.persona) ? st.persona : 'calm' }); }} />
         ))}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 24 }}>
         <Tag label={c.role} tone="white" />
         <Tag label={`성격 · ${persona.name}`} tone="white" />
-        {st.demo ? <Tag label="데모 대본" tone="grey" /> : null}
+        {st.demo ? <Tag label="예시 대화" tone="grey" /> : null}
       </View>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 12 }}>
         {/* 생성 중·실패한 나만의 챕터 (퍼센트 게이지 없이 단계만) */}
@@ -103,7 +103,7 @@ export default function Episodes() {
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <ActivityIndicator color={C.ink} size="small" />
-                <T s="small">생성중… 다른 장면을 하면서 기다려도 돼요</T>
+                <T s="small">장면 만드는 중…</T>
               </View>
             )}
           </View>
@@ -116,12 +116,12 @@ export default function Episodes() {
         ) : !list ? (
           <View style={{ padding: 24, alignItems: 'center', gap: 8 }}>
             <ActivityIndicator color={C.ink} />
-            <T s="small">에피소드 불러오는 중…</T>
+            <T s="small">챕터 불러오는 중…</T>
           </View>
         ) : !list.length ? (
           <View style={{ backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 6 }}>
-            <T s="label">아직 열린 에피소드가 없어요</T>
-            <T s="sub">{st.demo ? '데모 대본은 서윤 에피소드만 있어요.' : '다른 캐릭터를 골라 보세요.'}</T>
+            <T s="label">아직 열린 챕터가 없어요</T>
+            <T s="sub">{st.demo ? '예시 대화는 서윤 챕터만 있어요.' : '다른 캐릭터를 골라 보세요.'}</T>
           </View>
         ) : null}
         {list?.map((ch) => {
@@ -145,7 +145,7 @@ export default function Episodes() {
                 <View style={{ flex: 1, gap: 2 }}>
                   <T s="small">{ch.personal ? '나만의 챕터' : `CHAPTER ${ch.no}`}</T>
                   <T s="h3">{ch.title}</T>
-                  <T s="small">{ch.generating ? '생성중… 다른 학습을 하면서 기다려도 돼요' : ch.failed ? '생성하지 못했어요' : locked ? '구독하면 열려요' : `${ch.desc ? `${ch.desc} · ` : ''}${done}/${ch.subs.length}`}</T>
+                  <T s="small">{ch.generating ? '장면 만드는 중…' : ch.failed ? '생성하지 못했어요' : locked ? '구독하면 열려요' : `${ch.desc ? `${ch.desc} · ` : ''}${done}/${ch.subs.length}`}</T>
                 </View>
                 {now ? <Tag label="진행 중" tone="lime" /> : ch.subs.length && done === ch.subs.length ? <Tag label="완료" tone="dark" /> : null}
                 <Feather name={locked ? 'lock' : ch.generating ? 'loader' : isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.ink} />

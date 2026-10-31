@@ -56,7 +56,7 @@ export default function PersonaPick() {
       <TopBar />
       <View style={{ paddingHorizontal: 24, marginTop: 8 }}>
         <T s="h1">{c.call}, 어떤 성격일까요?</T>
-        <T s="sub">성격에 따라 반응과 난이도가 달라져요</T>
+        <T s="sub">성격별로 다른 반응</T>
       </View>
       <View style={{ height: 300, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
         {order.map((pid, i) => {
