@@ -9,6 +9,7 @@ import { api, absUrl, CharacterImage } from '../../lib/api';
 import { personaPhoto } from '../../lib/persona-photo';
 import { useStore } from '../../lib/store';
 import * as haptic from '../../lib/haptics';
+import { useT } from '../../lib/i18n';
 
 // 카드 자리: -1 왼쪽, 0 가운데, 1 오른쪽 (±2 는 화면 밖으로 빠지는 중)
 const SLOTS = [-2, -1, 0, 1, 2];
@@ -36,6 +37,7 @@ export default function PersonaPick() {
   });
   const pos = useRef(Object.fromEntries(order.map((id, i) => [id, new Animated.Value(i - 1)])) as Record<PersonaId, Animated.Value>).current;
   const busy = useRef(false);
+  const t = useT();
 
   // 옆 카드를 고르면 캐러셀처럼 옆으로 한 칸 밀려요. 반대쪽 끝 카드는 밖으로 나갔다가 반대편에서 들어와요.
   function pick(id: PersonaId) {
@@ -66,8 +68,8 @@ export default function PersonaPick() {
     <Screen>
       <TopBar />
       <View style={{ paddingHorizontal: 24, marginTop: 8 }}>
-        <T s="h1">{c.call}, 어떤 성격일까요?</T>
-        <T s="sub">성격별로 다른 반응</T>
+        <T s="h1">{t('{name}, 어떤 성격일까요?', { name: t(c.call) })}</T>
+        <T s="sub">{t('성격별로 다른 반응')}</T>
       </View>
       <View style={{ height: 300, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
         {order.map((pid, i) => {
@@ -118,8 +120,8 @@ export default function PersonaPick() {
                 />
               </View>
               <View style={{ padding: 12 }}>
-                <T s="h3">{p.name} <T style={{ color: C.sub }}>{'•'.repeat(p.id === 'picky' ? 3 : p.id === 'tease' ? 2 : 1)}</T></T>
-                <T s="small" numberOfLines={2} style={{ marginTop: 2 }}>{p.short}</T>
+                <T s="h3">{t(p.name)} <T style={{ color: C.sub }}>{'•'.repeat(p.id === 'picky' ? 3 : p.id === 'tease' ? 2 : 1)}</T></T>
+                <T s="small" numberOfLines={2} style={{ marginTop: 2 }}>{t(p.short)}</T>
               </View>
               {mid ? (
                 <View style={{ position: 'absolute', right: 10, top: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: C.lime, borderWidth: 2, borderColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
@@ -132,20 +134,20 @@ export default function PersonaPick() {
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 8 }}>
         {list.map((p) => (
-          <Chip key={p.id} label={p.name} on={p.id === sel} onPress={() => pick(p.id)} />
+          <Chip key={p.id} label={t(p.name)} on={p.id === sel} onPress={() => pick(p.id)} />
         ))}
       </View>
       <Card style={{ marginHorizontal: 24, marginTop: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <T s="h3">{cur.name} {c.role}</T>
-          <Tag label={cur.level} />
+          <T s="h3">{t(cur.name)} {t(c.role)}</T>
+          <Tag label={t(cur.level)} />
         </View>
-        <T s="sub" style={{ marginTop: 6 }}>{cur.long}</T>
+        <T s="sub" style={{ marginTop: 6 }}>{t(cur.long)}</T>
       </Card>
       <View style={{ flex: 1 }} />
       <View style={{ paddingHorizontal: 16 }}>
         <Btn
-          label="이 성격으로 시작"
+          label={t('이 성격으로 시작')}
           icon="arrow-right"
           onPress={() => {
             set({ persona: sel, onboarded: true });

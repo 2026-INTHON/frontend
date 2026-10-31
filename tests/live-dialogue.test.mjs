@@ -7,7 +7,7 @@ import vm from 'node:vm';
 test('Live dialogue carries the actual reply, image and agreed register through advance, clarification and correction',async()=>{
  const opening={id:'session',sceneId:'gf-3-4',characterId:'girlfriend',personalityId:'calm',nodeIndex:0,nodeCount:8,lives:3,status:'active',npc:{text:'음식 괜찮아요?',speechLevel:'polite'}};
  let current=opening;
- const context=vm.createContext({Date,Math,SERVER_PERSONA:{calm:'calm'},PLACE_OF:{seoyun:'cafe'},sceneById:()=>null,charFromServer:()=> 'seoyun',personaFromServer:()=> 'calm',absUrl:x=>x,subtitleText:x=>x?.text||null,
+ const context=vm.createContext({Date,Math,SERVER_PERSONA:{calm:'calm'},PLACE_OF:{seoyun:'cafe'},sceneById:()=>null,charFromServer:()=> 'seoyun',personaFromServer:()=> 'calm',absUrl:x=>x,subtitleText:x=>x?.text||null,tr:(_,ko)=>ko,
   api:{speech:async()=>{throw Object.assign(new Error('quota'),{code:'DAILY_QUOTA_EXCEEDED'});},start:async()=>opening,correct:async()=>opening,turn:async()=>({session:current,turn:{text:'답변',npcReply:current.npc.text,npcSpeechLevel:current.npc.speechLevel,emotion:'happy',render:{imageUrl:'https://img.test/happy.webp'},evaluation:{mark:current.nodeIndex?'O':'?',progression:current.nodeIndex?'advance':'retry'},feedback:{},lifeDelta:0}})},
  });
  const source=stripTypeScriptTypes(readFileSync(new URL('../src/lib/engine.ts',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,''),{mode:'transform'});

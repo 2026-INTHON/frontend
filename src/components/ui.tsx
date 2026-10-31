@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F, R } from '../lib/theme';
 import { useStore } from '../lib/store';
+import { useT } from '../lib/i18n';
 
 export function T({ children, s, style, ...rest }: { children: React.ReactNode; s?: keyof typeof ts; style?: TextStyle | TextStyle[]; numberOfLines?: number }) {
   return (
@@ -25,6 +26,10 @@ const ts = StyleSheet.create({
 });
 
 type BtnProps = { label: string; onPress?: () => void; icon?: keyof typeof Feather.glyphMap; kind?: 'dark' | 'lime' | 'line' | 'ghost'; style?: ViewStyle; disabled?: boolean; small?: boolean };
+// 번역 문구가 길면 글자 크기를 조금 줄여 한 줄에 (한·중·일 글자는 2칸으로 셈)
+const textWidth = (s: string) => [...s].reduce((n, ch) => n + (/[\u1100-\uFFDC]/.test(ch) ? 2 : 1), 0);
+export const fitSize = (label: string, base: number, room = 22) => { const w = textWidth(label); return w > room * 1.4 ? base - 3 : w > room ? base - 2 : base; };
+
 export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, small }: BtnProps) {
   const bg = kind === 'dark' ? C.ink : kind === 'lime' ? C.lime : kind === 'line' ? C.white : 'transparent';
   const fg = kind === 'dark' ? C.white : C.ink;
@@ -35,12 +40,12 @@ export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, smal
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
-        { height: small ? 44 : 56, borderRadius: R.btn, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 18, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
+        { height: small ? 44 : 56, borderRadius: R.btn, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: small ? 14 : 18, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
         kind === 'line' && { borderWidth: 1, borderColor: C.line },
         style,
       ]}
     >
-      <Text style={{ fontFamily: F.b, fontSize: small ? 14 : 16, color: fg }}>{label}</Text>
+      <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: F.b, fontSize: fitSize(label, small ? 14 : 16, small ? 16 : 22), color: fg }}>{label}</Text>
       {icon ? <Feather name={icon} size={18} color={kind === 'dark' ? C.lime : C.ink} /> : null}
     </Pressable>
   );
@@ -49,7 +54,7 @@ export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, smal
 export function Chip({ label, on, onPress, style, dark }: { label: string; on?: boolean; onPress?: () => void; style?: ViewStyle; dark?: boolean }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!on }} style={[{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill, backgroundColor: on ? C.ink : dark ? C.bg : C.white, borderWidth: on ? 0 : 1, borderColor: C.line }, style]}>
-      <Text style={{ fontFamily: on ? F.b : F.m, fontSize: 13, color: on ? C.white : C.ink }}>{label}</Text>
+      <Text numberOfLines={1} style={{ fontFamily: on ? F.b : F.m, fontSize: fitSize(label, 13, 18), color: on ? C.white : C.ink }}>{label}</Text>
     </Pressable>
   );
 }
@@ -70,8 +75,9 @@ export function Screen({ children, bg = C.bg, style, pad = true }: { children: R
 }
 
 export function IconBtn({ name, onPress, bg = C.white, color = C.ink, size = 40, label }: { name: keyof typeof Feather.glyphMap; onPress?: () => void; bg?: string; color?: string; size?: number; label?: string }) {
+  const t = useT();
   return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={label ?? ICON_LABEL[name] ?? name} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={label ?? (ICON_LABEL[name] ? t(ICON_LABEL[name]!) : name)} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
       <Feather name={name} size={size * 0.45} color={color} />
     </Pressable>
   );
@@ -151,9 +157,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export const FRAME = { flex: 1, width: '100%' as const, maxWidth: 430, alignSelf: 'center' as const, overflow: 'hidden' as const };
 
 export function Hearts({ n, max = 3 }: { n: number; max?: number }) {
+  const t = useT();
   return (
-    <View accessible accessibilityLabel={`체력 ${n}/${max}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
-      <T s="small" style={{ color: C.ink }}>체력</T>
+    <View accessible accessibilityLabel={t('체력 {n}/{max}', { n, max })} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
       {Array.from({ length: max }).map((_, i) => (
         <Ionicons key={i} name="heart" size={15} color={i < n ? C.ink : C.line} />
       ))}
