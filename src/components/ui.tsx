@@ -128,18 +128,22 @@ export function Sheet({ visible, onClose, children, dim = true }: { visible: boo
   }, [visible]);
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      {/* 배경은 화면 전체를 덮고, 시트는 그 위에 얹어요 (옆이 덜 어두워지는 문제 방지) */}
-      <AnimatedPressable style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: dim ? 'rgba(17,17,17,0.28)' : 'transparent', opacity: a }} onPress={onClose} />
-      <View pointerEvents="box-none" style={{ flex: 1, justifyContent: 'flex-end' }}>
-      <Animated.View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20, width: '100%', maxWidth: 430, alignSelf: 'center', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: -4 }, elevation: 12, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [480, 0] }) }] }}>
-        <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: C.line, marginTop: -12, marginBottom: 16 }} />
-        {children}
-      </Animated.View>
+      {/* PC 웹에서도 폰 화면(430) 안에서만 어두워지고 올라와요 */}
+      <View style={FRAME}>
+        <AnimatedPressable style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: dim ? 'rgba(17,17,17,0.28)' : 'transparent', opacity: a }} onPress={onClose} />
+        <View pointerEvents="box-none" style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Animated.View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: -4 }, elevation: 12, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [480, 0] }) }] }}>
+            <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: C.line, marginTop: -12, marginBottom: 16 }} />
+            {children}
+          </Animated.View>
+        </View>
       </View>
     </Modal>
   );
 }
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+// 모달 안쪽 틀: 폰 화면 폭에 맞추고 밖으로 삐져나오지 않게
+export const FRAME = { flex: 1, width: '100%' as const, maxWidth: 430, alignSelf: 'center' as const, overflow: 'hidden' as const };
 
 export function Hearts({ n, max = 3 }: { n: number; max?: number }) {
   return (

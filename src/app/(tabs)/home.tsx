@@ -3,7 +3,7 @@ import { Image, Modal, Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Btn, Card, Coin, CoinPill, IconBtn, T, Tag } from '../../components/ui';
+import { Btn, Card, Coin, CoinPill, IconBtn, T, Tag, FRAME } from '../../components/ui';
 import { C } from '../../lib/theme';
 import { IMG, PERSONAS, charById } from '../../lib/data';
 import { useStore } from '../../lib/store';
@@ -51,7 +51,7 @@ export default function Home() {
 
       {/* 20 연속 출석 축하 (데모용으로 처음 한 번 떠요) */}
       <Modal visible={streak} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: C.dim, justifyContent: 'center', padding: 28 }}>
+        <View style={{ ...FRAME, backgroundColor: C.dim, justifyContent: 'center', padding: 28 }}>
           <View style={{ backgroundColor: C.white, borderRadius: 28, padding: 24, alignItems: 'center', gap: 10, width: '100%', maxWidth: 360, alignSelf: 'center' }}>
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: C.lime, alignItems: 'center', justifyContent: 'center' }}>
               <Feather name="zap" size={32} color={C.ink} />
