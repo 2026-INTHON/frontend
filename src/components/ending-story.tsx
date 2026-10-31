@@ -109,7 +109,7 @@ export function RecapCard({ ending }: { ending: Ending }) {
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ gap: 2 }}>
-        <T s="small">정리 카드</T>
+        <T s="small">한 줄 정리</T>
         <T s="h3">{tr?.title ?? r.title}</T>
         {tr && tr.title !== r.title ? <T s="small">{r.title}</T> : null}
       </View>

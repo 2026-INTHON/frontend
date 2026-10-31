@@ -17,17 +17,17 @@ export default function MistakeDetail() {
   if (!m) {
     return (
       <Screen>
-        <TopBar title="오답 상세" />
+        <TopBar title="복습할 표현" />
         <View style={{ padding: 24, gap: 12 }}>
           <T s="sub">이 말실수를 찾지 못했어요.</T>
-          <Btn label="오답 도감으로" onPress={() => router.replace('/mistakes')} />
+          <Btn label="복습 노트로" onPress={() => router.replace('/mistakes')} />
         </View>
       </Screen>
     );
   }
   return (
     <Screen>
-      <TopBar title="오답 상세" />
+      <TopBar title="복습할 표현" />
       <ScrollView contentContainerStyle={{ padding: 24, gap: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <T s="h2" style={{ flex: 1 }}>{m.title}</T>
@@ -56,7 +56,7 @@ export default function MistakeDetail() {
         {m.fixed ? <Tag label="고침" tone="lime" /> : null}
       </ScrollView>
       <View style={{ paddingHorizontal: 16 }}>
-        <Btn label="이 부분만 다시 연습" icon="rotate-ccw" onPress={() => router.push({ pathname: '/scene/[id]', params: { id: m.scene || 'today' } })} />
+        <Btn label="다시 연습하기" icon="rotate-ccw" onPress={() => router.push({ pathname: '/scene/[id]', params: { id: m.scene || 'today' } })} />
       </View>
     </Screen>
   );

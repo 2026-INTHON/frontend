@@ -64,9 +64,9 @@ export function Cues({ cues }: { cues?: { k: string; v: string }[] }) {
   );
 }
 
-// F안 · 반응 말풍선 배지: O 통했어(라임 과녁) / △ 더 말해 줘(흰 원 세모) / X 말실수(빨강) / ? 다시 말해 줘
+// F안 · 반응 말풍선 배지: O 의도 전달 성공(라임 과녁) / △ 구체적인 설명 필요(흰 원 세모) / X 말실수(빨강) / ? 의도 불명확 다시 말해 줘
 export type MarkKind = 'O' | '△' | 'X' | '?';
-const MARK_NAME: Record<MarkKind, string> = { O: '통했어', '△': '더 말해 줘', X: '말실수', '?': '다시 말해 줘' };
+const MARK_NAME: Record<MarkKind, string> = { O: '의도 전달 성공', '△': '구체적인 설명 필요', X: '말실수', '?': '의도 불명확' };
 export function ReactionBadge({ mark, size = 34, onPress }: { mark: MarkKind; size?: number; onPress?: () => void }) {
   const bg = mark === 'O' ? C.lime : mark === 'X' ? C.red : C.white;
   const s = size;

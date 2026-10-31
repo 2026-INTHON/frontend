@@ -66,7 +66,7 @@ export function Tag({ label, tone = 'grey' }: { label: string; tone?: 'grey' | '
 
 export function Screen({ children, bg = C.bg, style, pad = true }: { children: React.ReactNode; bg?: string; style?: ViewStyle; pad?: boolean }) {
   const ins = useSafeAreaInsets();
-  return <View style={[{ flex: 1, backgroundColor: bg, paddingTop: ins.top + 8, paddingBottom: pad ? ins.bottom + 12 : 0 }, style]}>{children}</View>;
+  return <View style={[{ flex: 1, backgroundColor: bg, paddingTop: Math.max(ins.top, 12) + 12, paddingBottom: pad ? ins.bottom + 12 : 0 }, style]}>{children}</View>;
 }
 
 export function IconBtn({ name, onPress, bg = C.white, color = C.ink, size = 40, label }: { name: keyof typeof Feather.glyphMap; onPress?: () => void; bg?: string; color?: string; size?: number; label?: string }) {
