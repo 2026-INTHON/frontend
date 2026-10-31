@@ -1,0 +1,9 @@
+:8080 {
+  root * /srv
+  encode zstd gzip
+  header X-Content-Type-Options nosniff
+  @health path /healthz
+  respond @health "ok" 200
+  try_files {path} /index.html
+  file_server
+}
