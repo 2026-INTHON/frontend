@@ -10,22 +10,23 @@ import { api } from '../lib/api';
 import { useStore } from '../lib/store';
 import { useGenerationJobs } from '../lib/generations';
 import { learningCopy } from '../lib/learning-copy';
+import { demoChapterText } from '../lib/demo-chapters';
 
 // 화면에 그릴 챕터 모양 (서버 /chapters 또는 데모 대본)
 type Sub = { id: string; title: string; sceneId: string | null; state: 'done' | 'now' | 'open' | 'locked'; grade?: string | null; ready: boolean };
 type Chapter = { id: string; no: number; title: string; desc: string; locked: boolean; generating: boolean; failed: boolean; personal: boolean; subs: Sub[] };
 
-function fromDemo(): Chapter[] {
+function fromDemo(lang:string): Chapter[] {
   return CHAPTERS.map((c) => ({
     id: `demo-${c.no}`,
     no: c.no,
-    title: c.title,
-    desc: c.desc,
+    title: demoChapterText(c.title,lang),
+    desc: demoChapterText(c.desc,lang),
     locked: c.locked,
     generating: false,
     failed: false,
     personal: false,
-    subs: c.subs.map((s) => ({ id: s.id, title: s.title, sceneId: s.scene ?? null, state: s.state, grade: s.grade, ready: !!s.scene })),
+    subs: c.subs.map((s) => ({ id: s.id, title: demoChapterText(s.title,lang), sceneId: s.scene ?? null, state: s.state, grade: s.grade, ready: !!s.scene })),
   }));
 }
 
@@ -70,7 +71,7 @@ export default function Episodes() {
   }, [char, st.demo, st.pack, st.lang, key]);
   // 데모 대본은 서윤 챕터만 있어요
   const cur = res?.key === key ? res : null;
-  const list: Chapter[] | null = st.demo ? (char === 'seoyun' ? fromDemo() : []) : (cur?.list ?? null);
+  const list: Chapter[] | null = st.demo ? (char === 'seoyun' ? fromDemo(st.lang) : []) : (cur?.list ?? null);
   const err = st.demo ? null : (cur?.err ?? null);
   const load = () => setTick((t) => t + 1);
   // 펼친 챕터: 직접 고르기 전엔 진행 중인 챕터
