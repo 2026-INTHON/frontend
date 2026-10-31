@@ -7,15 +7,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Btn, Hearts, IconBtn, Sheet, T, Tag } from '../../components/ui';
 import { Dots, LineCard, Stat, Wave } from '../../components/scene-parts';
 import { C, F } from '../../lib/theme';
-import { IMG, PERSONAS, charById, sceneById } from '../../lib/data';
-import { createEngine, mockEngine, Engine, Out } from '../../lib/engine';
+import { IMG, Line, PERSONAS, charById, sceneById } from '../../lib/data';
+import { createEngine, mockEngine, Engine, Hint, Out } from '../../lib/engine';
 import { speak, stopSpeak } from '../../lib/voice';
 import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
 import { useStore } from '../../lib/store';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized' | 'mistake' | 'feedback';
-type Log = { who: 'char' | 'me'; text: string; tag?: 'bad' | 'good' };
+type Log = { who: 'char' | 'me'; text: string; tag?: 'bad' | 'good' | 'mid' | 'native' };
 
 const TONE: Record<string, string> = { office: 'rgba(220,224,229,0.35)', cafe: 'rgba(238,230,219,0.35)', street: 'rgba(217,222,232,0.35)' };
 
@@ -36,9 +36,11 @@ export default function SceneScreen() {
   const [editHeard, setEditHeard] = useState(false);
   const [out, setOut] = useState<Out | null>(null);
   const [answer, setAnswer] = useState('');
-  const [line, setLine] = useState<{ line: string; action?: string }>({ line: local.turns[0].line, action: local.turns[0].action });
+  const [line, setLine] = useState<Line>({ line: local.turns[0].line, action: local.turns[0].action });
   const [playing, setPlaying] = useState(false);
-  const [hint, setHint] = useState<{ thought: string; tip: string } | null>(null);
+  const [hint, setHint] = useState<Hint | null>(null);
+  const [hintStep, setHintStep] = useState<1 | 2>(1);
+  const [views, setViews] = useState(false);
   const [pause, setPause] = useState(false);
   const [history, setHistory] = useState(false);
   const [fail, setFail] = useState(false);
@@ -84,7 +86,7 @@ export default function SceneScreen() {
     showLine(eng.current.line);
   }
 
-  function showLine(l: { line: string; action?: string }) {
+  function showLine(l: Line) {
     setLine(l);
     setLog((g) => [...g, { who: 'char', text: l.line }]);
     play(l.line);
@@ -158,20 +160,21 @@ export default function SceneScreen() {
       o = await eng.current!.submit(ans, voice ? { transcriptId: tid } : undefined);
     } catch {
       // 서버 오류면 앱 안 대본으로 바꿔서 계속
-      eng.current = mockEngine(local);
+      eng.current = mockEngine(local, st.persona, st.pack);
       o = await eng.current.submit(ans);
     }
     setJudging(false);
     setOut(o);
     setHearts(eng.current!.lives);
-    setLog((g) => [...g, { who: 'me', text: ans, tag: o.ok ? (g.some((x) => x.tag === 'bad') ? 'good' : undefined) : 'bad' }, { who: 'char', text: o.reply }]);
+    const tag: Log['tag'] = o.native ? 'native' : o.mark === 'O' ? (o.first ? 'good' : undefined) : o.mark === '△' ? 'mid' : 'bad';
+    setLog((g) => [...g, { who: 'me', text: ans, tag }, { who: 'char', text: o.reply }]);
     setLine({ line: o.reply });
     if (o.ok) {
       haptic.good();
       setPhase('feedback');
     } else {
       haptic.bad();
-      st.addMistake({ id: `${local.id}-${Date.now()}`, scene: eng.current!.title, title: eng.current!.title, who: `${ch.name} · ${persona.name}`, when: '오늘', said: ans, better: o.better, why: o.why, fixed: false, line: eng.current!.line.line });
+      if (o.mark === 'X' && !o.native) st.addMistake({ id: `${local.id}-${Date.now()}`, scene: eng.current!.title, title: eng.current!.title, who: `${ch.name} · ${persona.name}`, when: '오늘', said: ans, better: o.better, why: o.why, fixed: false, line: eng.current!.line.line });
       if (o.failed) return setFail(true);
       setPhase('mistake');
     }
@@ -197,14 +200,22 @@ export default function SceneScreen() {
     showLine(eng.current!.line);
   }
 
+  // 속마음 힌트: 1단계 단서 → 2단계 속마음
   async function openHint() {
     setHintNudge(false);
+    setHintStep(1);
     try {
-      setHint(await eng.current!.hint());
+      setHint(await eng.current!.hint(1));
     } catch {
       const t = local.turns[0];
-      setHint({ thought: t.thought, tip: t.tip });
+      setHint({ clue: [{ k: '주목 표현', v: t.clue.focus }, { k: '행동', v: t.clue.act }, { k: '상황 단서', v: t.clue.ctx }], thought: t.thought, tip: t.tip });
     }
+  }
+  async function revealThought() {
+    try {
+      await eng.current!.hint(2);
+    } catch {}
+    setHintStep(2);
   }
 
   async function finish() {
@@ -213,11 +224,11 @@ export default function SceneScreen() {
     try {
       f = await eng.current!.final();
     } catch {
-      f = { grade: 'A-', best: '', worst: '', coins: 30, mistakes: 0, fixed: 0 };
+      f = { grade: 'A-', best: '', worst: '', coins: 30, mistakes: 0, fixed: 0, reach: 100, infer: 80, self: 80 };
     }
     st.addCoins(f.coins);
     st.set({ lastScene: local.id });
-    router.replace({ pathname: '/result', params: { id: local.id, title: eng.current!.title, no: eng.current!.no, goal: eng.current!.brief.goal, coins: String(f.coins), grade: f.grade, m: String(f.mistakes), fixed: String(f.fixed), best: f.best, worst: f.worst } });
+    router.replace({ pathname: '/result', params: { id: local.id, title: eng.current!.title, no: eng.current!.no, goal: eng.current!.brief.goal, coins: String(f.coins), grade: f.grade, m: String(f.mistakes), fixed: String(f.fixed), best: f.best, worst: f.worst, reach: String(f.reach), infer: String(f.infer), self: String(f.self) } });
   }
 
   function restart() {
@@ -246,6 +257,13 @@ export default function SceneScreen() {
       <Image source={IMG.char[charId]} style={{ position: 'absolute', top: ins.top + 64, alignSelf: 'center', width: '62%', height: '72%' }} resizeMode="contain" />
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '42%', backgroundColor: 'rgba(243,242,238,0.72)' }} />
 
+      {/* 캐릭터 반응 O △ X */}
+      {out && (phase === 'mistake' || phase === 'feedback') ? (
+        <View style={{ position: 'absolute', top: ins.top + 110, left: 24 }}>
+          <MarkBadge mark={out.native ? '?' : out.mark} size={64} />
+        </View>
+      ) : null}
+
       {/* 상단 단축바 */}
       <View style={{ position: 'absolute', top: ins.top + 8, left: 16, right: 16, flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', gap: 4, backgroundColor: C.white, borderRadius: 999, padding: 4 }}>
@@ -271,7 +289,7 @@ export default function SceneScreen() {
 
       <KeyboardAvoidingView pointerEvents="box-none" behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end' }}>
         <View pointerEvents="box-none" style={{ paddingHorizontal: 16, paddingBottom: ins.bottom + 12, gap: 12 }}>
-          {phase !== 'brief' ? <LineCard name={ch.name} line={line.line} action={line.action} playing={playing} onPlay={() => (playing ? stopPlay() : play(line.line))} /> : null}
+          {phase !== 'brief' ? <LineCard name={ch.name} line={line.line} action={line.action} cues={phase === 'mistake' || phase === 'feedback' ? undefined : line.cues} playing={playing} onPlay={() => (playing ? stopPlay() : play(line.line))} /> : null}
 
           {/* 듣는 중 / 인식 중 */}
           {listening ? (
@@ -372,37 +390,66 @@ export default function SceneScreen() {
         </Pressable>
       ) : null}
 
-      {/* 말실수 */}
+      {/* 말실수: △ / X / 모국어 */}
       <Sheet visible={phase === 'mistake'} onClose={retry}>
-        <View style={{ gap: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Tag label="사건 발생" tone="red" />
-            <T s="small" style={{ color: C.red, fontFamily: F.b }}>체력 -1</T>
-          </View>
-          <T s="h2">{ch.name} 표정이 굳었어요</T>
-          <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
-            <T s="small">내 답</T>
-            <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
-          </View>
-          <T s="label">왜 문제였을까?</T>
-          <T s="sub">{out?.why}</T>
-          <View style={{ borderLeftWidth: 3, borderLeftColor: C.lime, paddingLeft: 10 }}>
-            <T s="body">"{out?.better}"</T>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-            <Btn label="계속하기" kind="line" style={{ flex: 1 }} onPress={cont} />
-            <Btn label="다시 해보기" icon="rotate-ccw" style={{ flex: 1.3 }} onPress={retry} />
-          </View>
-        </View>
-      </Sheet>
-
-      {/* 턴 피드백 */}
-      <Sheet visible={phase === 'feedback'} onClose={next}>
         {out ? (
           <View style={{ gap: 12 }}>
-            <Tag label="말투 피드백" tone="lime" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <MarkBadge mark={out.native ? '?' : out.mark} size={30} />
+              {out.native ? <Tag label="모국어로 답했어요" /> : out.mark === '△' ? <Tag label="조금 아쉬워요" /> : <Tag label="사건 발생" tone="red" />}
+              {out.lifeDelta < 0 ? <T s="small" style={{ color: C.red, fontFamily: F.b }}>체력 -1</T> : <T s="small">체력은 그대로예요</T>}
+            </View>
+            <T s="h2">{out.native ? '한국어로는 이렇게 말해요' : out.mark === '△' ? `${ch.name}${josa(ch.name)} 고개를 갸웃해요` : `${ch.name} 표정이 굳었어요`}</T>
+            <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
+              <T s="small">내 답</T>
+              <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
+            </View>
+            {!out.native ? (
+              <>
+                <T s="label">왜 {out.mark === '△' ? '아쉬웠을까?' : '문제였을까?'}</T>
+                <T s="sub">{out.why}</T>
+              </>
+            ) : null}
+            <View style={{ borderLeftWidth: 3, borderLeftColor: C.lime, paddingLeft: 10 }}>
+              <T s="small">{out.native ? '따라 말해 보세요' : '이렇게 말하면 좋아요'}</T>
+              <T s="body" style={{ marginTop: 2 }}>"{out.better}"</T>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              {out.mark === '△' && !out.native ? <Btn label="그대로 진행" kind="line" style={{ flex: 1 }} onPress={cont} /> : null}
+              <Btn label={out.native ? '한국어로 다시 말하기' : '정정하기'} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={retry} />
+            </View>
+            {out.mark === 'X' && out.tries >= 3 && E?.canSkip ? (
+              <Pressable onPress={cont} style={{ alignSelf: 'center', padding: 6 }}>
+                <T s="label" style={{ textDecorationLine: 'underline', color: C.sub }}>정답 보고 넘어가기</T>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </Sheet>
+
+      {/* 턴 피드백 (O) */}
+      <Sheet visible={phase === 'feedback' && !views} onClose={next}>
+        {out ? (
+          <View style={{ gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <MarkBadge mark="O" size={30} />
+              <Tag label={out.first ? '정정 성공' : '말투 피드백'} tone="lime" />
+            </View>
             <T s="h3">의도 전달 성공 · {ch.name} 표정이 누그러졌어요</T>
-            <T s="sub">"{answer}"</T>
+            {out.first ? (
+              <View style={{ gap: 6 }}>
+                <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
+                  <T s="small">처음 답</T>
+                  <T s="body" style={{ marginTop: 2, color: C.sub, textDecorationLine: 'line-through' }}>"{out.first}"</T>
+                </View>
+                <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12, borderLeftWidth: 3, borderLeftColor: C.lime }}>
+                  <T s="small">고친 답</T>
+                  <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
+                </View>
+              </View>
+            ) : (
+              <T s="sub">"{answer}"</T>
+            )}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               <Stat k="톤" v={out.tone} />
               <Stat k="속도" v={out.speed} />
@@ -413,6 +460,13 @@ export default function SceneScreen() {
               <Feather name="zap" size={16} color={C.ink} style={{ marginTop: 2 }} />
               <T s="sub" style={{ flex: 1, color: C.ink }}>{out.tip}</T>
             </View>
+            {out.views.length ? (
+              <Pressable onPress={() => setViews(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: C.ink, borderRadius: 14, padding: 12 }}>
+                <Feather name="users" size={16} />
+                <T s="label" style={{ flex: 1 }}>다른 사람이 이 말을 하면?</T>
+                <Feather name="chevron-right" size={18} />
+              </Pressable>
+            ) : null}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
               <Btn label="다시 해보기" kind="line" style={{ flex: 1 }} onPress={retry} />
               <Btn label={out.done ? '결과 보기' : '다음 대화'} icon="arrow-right" style={{ flex: 1.3 }} onPress={next} />
@@ -421,21 +475,67 @@ export default function SceneScreen() {
         ) : null}
       </Sheet>
 
-      {/* 속마음 힌트 */}
+      {/* 관점 전환: 같은 말, 다른 관계 */}
+      <Sheet visible={views} onClose={() => setViews(false)}>
+        <View style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Feather name="users" size={18} />
+            <T s="h3">다른 사람이 이 말을 하면?</T>
+          </View>
+          <View style={{ backgroundColor: C.bg, borderRadius: 14, padding: 12 }}>
+            <T s="small">내가 한 말</T>
+            <T s="body" style={{ marginTop: 2 }}>"{answer}"</T>
+          </View>
+          {out?.views.map((v, i) => (
+            <View key={i} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 14, padding: 12, gap: 4 }}>
+              <T s="label">{v.who}</T>
+              <T s="body">{v.meaning}</T>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <Feather name="eye" size={12} color={C.sub} />
+                <T s="small">{v.cue}</T>
+              </View>
+            </View>
+          ))}
+          <Btn label="돌아가기" kind="line" onPress={() => setViews(false)} />
+        </View>
+      </Sheet>
+
+      {/* 속마음 힌트: 1단계 단서 → 2단계 속마음 */}
       <Sheet visible={!!hint} onClose={() => setHint(null)}>
         <View style={{ gap: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Feather name="search" size={18} />
             <T s="h3">{ch.name}의 속마음</T>
+            <View style={{ flex: 1 }} />
+            <Tag label={`${hintStep}/2 단계`} tone={hintStep === 2 ? 'lime' : 'grey'} />
           </View>
-          <View style={{ backgroundColor: C.bg, borderRadius: 18, padding: 16 }}>
-            <T s="body" style={{ fontFamily: F.m }}>{hint?.thought}</T>
+          <T s="label">1단계 · 단서부터 읽어 봐요</T>
+          <View style={{ backgroundColor: C.bg, borderRadius: 18, padding: 14, gap: 8 }}>
+            {hint?.clue.map((c, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 8 }}>
+                <T s="small" style={{ width: 64 }}>{c.k}</T>
+                <T s="body" style={{ flex: 1, fontSize: 14 }}>{c.v}</T>
+              </View>
+            ))}
           </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Feather name="zap" size={16} style={{ marginTop: 3 }} />
-            <T s="body" style={{ flex: 1 }}>{hint?.tip}</T>
-          </View>
-          <Btn label="돌아가서 말하기" icon="mic" onPress={() => { setHint(null); setPhase('talk'); }} />
+          {hintStep === 2 ? (
+            <>
+              <T s="label">2단계 · 진짜 속마음</T>
+              <View style={{ backgroundColor: C.ink, borderRadius: 18, padding: 16 }}>
+                <T s="body" style={{ fontFamily: F.m, color: C.white }}>{hint?.thought}</T>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Feather name="zap" size={16} style={{ marginTop: 3 }} />
+                <T s="body" style={{ flex: 1 }}>{hint?.tip}</T>
+              </View>
+              <Btn label="돌아가서 말하기" icon="mic" onPress={() => { setHint(null); setPhase('talk'); }} />
+            </>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Btn label="추측해서 말하기" kind="line" style={{ flex: 1 }} onPress={() => { setHint(null); setPhase('talk'); }} />
+              <Btn label="속마음 보기" icon="eye" style={{ flex: 1.3 }} onPress={revealThought} />
+            </View>
+          )}
         </View>
       </Sheet>
 
@@ -484,7 +584,7 @@ export default function SceneScreen() {
         <ScrollView style={{ maxHeight: 380 }} contentContainerStyle={{ gap: 10 }}>
           {log.map((m, i) => (
             <View key={i} style={{ alignSelf: m.who === 'me' ? 'flex-end' : 'flex-start', maxWidth: '82%', gap: 4 }}>
-              {m.tag ? <Tag label={m.tag === 'bad' ? '말실수' : '수습 성공'} tone={m.tag === 'bad' ? 'red' : 'lime'} /> : null}
+              {m.tag ? <Tag label={{ bad: 'X 말실수', good: 'O 수습 성공', mid: '△ 애매함', native: '모국어' }[m.tag]} tone={m.tag === 'bad' ? 'red' : m.tag === 'good' ? 'lime' : 'grey'} /> : null}
               <View style={{ backgroundColor: m.who === 'me' ? C.ink : C.bg, borderRadius: 16, padding: 12 }}>
                 <T style={{ color: m.who === 'me' ? C.white : C.ink }}>{m.text}</T>
               </View>
@@ -507,3 +607,16 @@ function Brief({ k, v }: { k: string; v: string }) {
     </View>
   );
 }
+
+// 캐릭터 반응 도장: O 라임 / △ 회색 / X 빨강 / ? 모국어
+function MarkBadge({ mark, size = 40 }: { mark: string; size?: number }) {
+  const bg = mark === 'O' ? C.lime : mark === 'X' ? C.red : C.white;
+  const fg = mark === 'X' ? C.white : C.ink;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, borderWidth: 2, borderColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
+      <T style={{ fontFamily: F.k, fontSize: size * 0.5, lineHeight: size * 0.62, color: fg }}>{mark}</T>
+    </View>
+  );
+}
+
+const josa = (w: string) => ((w.charCodeAt(w.length - 1) - 0xac00) % 28 ? '이' : '가');

@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Animated, Easing, Image, Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Btn, Card, Chip, Screen, T, Tag, TopBar } from '../../components/ui';
 import { C } from '../../lib/theme';
 import { IMG, PERSONAS, PersonaId, charById, sceneForChar } from '../../lib/data';
 import { useStore } from '../../lib/store';
+import * as haptic from '../../lib/haptics';
+
+const X = [-112, 0, 112];
+const ROT = ['-8deg', '0deg', '8deg'];
 
 // 05 성격 고르기: 카드 3장이 펼쳐지고, 고르면 바로 장면 시작
 export default function PersonaPick() {
@@ -16,6 +20,18 @@ export default function PersonaPick() {
   const others = list.filter((p) => p.id !== sel);
   const order = [others[0], list.find((p) => p.id === sel)!, others[1]];
   const cur = list.find((p) => p.id === sel)!;
+  // 카드 섞기: 가운데로 모였다가 순서를 바꾸고 다시 펼쳐요
+  const spread = useRef(new Animated.Value(1)).current;
+  const busy = useRef(false);
+  function pick(id: PersonaId) {
+    if (id === sel || busy.current) return;
+    busy.current = true;
+    haptic.tap();
+    Animated.timing(spread, { toValue: 0, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
+      setSel(id);
+      Animated.spring(spread, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }).start(() => (busy.current = false));
+    });
+  }
   return (
     <Screen>
       <TopBar />
@@ -26,23 +42,30 @@ export default function PersonaPick() {
       <View style={{ height: 300, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
         {order.map((p, i) => {
           const mid = i === 1;
+          const tf = {
+            transform: [
+              { translateX: spread.interpolate({ inputRange: [0, 1], outputRange: [0, X[i]] }) },
+              { rotate: spread.interpolate({ inputRange: [0, 1], outputRange: ['0deg', ROT[i]] }) },
+            ],
+          };
           return (
-            <Pressable
-              key={p.id + i}
-              onPress={() => setSel(p.id)}
+            <AnimatedPressable
+              key={p.id}
+              onPress={() => pick(p.id)}
               style={{
                 position: 'absolute',
                 width: mid ? 176 : 140,
                 height: mid ? 260 : 210,
-                left: mid ? undefined : i === 0 ? 16 : undefined,
-                right: i === 2 ? 16 : undefined,
+                left: '50%',
+                marginLeft: mid ? -88 : -70,
+                top: mid ? 20 : 45,
                 zIndex: mid ? 2 : 1,
-                transform: [{ rotate: mid ? '0deg' : i === 0 ? '-8deg' : '8deg' }],
                 backgroundColor: C.white,
                 borderRadius: 20,
                 borderWidth: mid ? 2 : 1,
                 borderColor: mid ? C.ink : C.line,
                 overflow: 'hidden',
+                ...tf,
               }}
             >
               <View style={{ height: mid ? 160 : 126, backgroundColor: '#F8F8F9', overflow: 'hidden' }}>
@@ -57,13 +80,13 @@ export default function PersonaPick() {
                   <Feather name="check" size={14} />
                 </View>
               ) : null}
-            </Pressable>
+            </AnimatedPressable>
           );
         })}
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 8 }}>
         {list.map((p) => (
-          <Chip key={p.id} label={p.name} on={p.id === sel} onPress={() => setSel(p.id)} />
+          <Chip key={p.id} label={p.name} on={p.id === sel} onPress={() => pick(p.id)} />
         ))}
       </View>
       <Card style={{ marginHorizontal: 24, marginTop: 16 }}>
@@ -87,3 +110,5 @@ export default function PersonaPick() {
     </Screen>
   );
 }
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

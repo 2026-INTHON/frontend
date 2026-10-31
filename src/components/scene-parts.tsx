@@ -47,7 +47,24 @@ export function Dots() {
 }
 
 // 캐릭터 대사 말풍선
-export function LineCard({ name, line, action, playing, onPlay, sec = 3 }: { name: string; line: string; action?: string; playing?: boolean; onPlay?: () => void; sec?: number }) {
+const CUE_ICON: Record<string, any> = { 표정: 'smile', 억양: 'trending-up', 망설임: 'more-horizontal', 침묵: 'pause', 행동: 'move' };
+
+// 비언어 단서 칩: 표정 · 억양 · 망설임 · 침묵 · 행동
+export function Cues({ cues }: { cues?: { k: string; v: string }[] }) {
+  if (!cues?.length) return null;
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+      {cues.map((c, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 }}>
+          <Feather name={CUE_ICON[c.k] ?? 'eye'} size={11} color={C.sub} />
+          <T s="small" style={{ color: C.ink, fontSize: 12 }}>{c.k} · {c.v}</T>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function LineCard({ name, line, action, cues, playing, onPlay, sec = 3 }: { name: string; line: string; action?: string; cues?: { k: string; v: string }[]; playing?: boolean; onPlay?: () => void; sec?: number }) {
   return (
     <View>
       <View style={{ position: 'absolute', top: -12, left: 16, zIndex: 2, backgroundColor: C.ink, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
@@ -56,6 +73,7 @@ export function LineCard({ name, line, action, playing, onPlay, sec = 3 }: { nam
       <View style={{ backgroundColor: C.white, borderRadius: 20, borderWidth: 2, borderColor: C.ink, padding: 20, paddingTop: 22 }}>
         <T s="h2" style={{ fontSize: 19 }}>{line}</T>
         {action ? <T s="sub" style={{ marginTop: 6 }}>{action}</T> : null}
+        <Cues cues={cues} />
         {onPlay ? (
           <Pressable onPress={onPlay} style={{ marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6 }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>

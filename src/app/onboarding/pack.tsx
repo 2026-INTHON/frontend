@@ -6,13 +6,15 @@ import { Btn, Screen, T } from '../../components/ui';
 import { C, F } from '../../lib/theme';
 import { CHARACTERS, IMG } from '../../lib/data';
 import { useStore } from '../../lib/store';
+import { Lineup } from '../../components/lineup';
 
 const PACKS = [
   { id: 'ko' as const, name: '한국어팩', desc: '회사 · 학교 · 친구 사이 한국어 대화', icon: 'globe' as const },
   { id: 'en' as const, name: '영어팩', desc: '카페 · 여행 · 회사에서 영어로', icon: 'briefcase' as const },
 ];
 
-// 02 팩 고르기
+// 02 팩 고르기import { Lineup } from '../../components/lineup';
+
 export default function Pack() {
   const { pack, set } = useStore();
   const [sel, setSel] = useState(pack);
@@ -22,10 +24,8 @@ export default function Pack() {
         <T style={{ fontFamily: F.logo, fontSize: 44, lineHeight: 54 }}>Malo</T>
         <T s="sub">말실수해도 괜찮은 대화 연습장</T>
       </View>
-      <View style={{ height: 220, marginHorizontal: 24, marginTop: 16, borderRadius: 20, backgroundColor: '#F8F8F9', flexDirection: 'row', alignItems: 'flex-end', overflow: 'hidden', paddingTop: 12 }}>
-        {CHARACTERS.map((c) => (
-          <Image key={c.id} source={IMG.char[c.id]} style={{ flex: 1, height: '100%' }} resizeMode="contain" />
-        ))}
+      <View style={{ height: 220, marginHorizontal: 24, marginTop: 16, borderRadius: 20, backgroundColor: '#F8F8F9', overflow: 'hidden', paddingTop: 12, paddingHorizontal: 8 }}>
+        <Lineup fill={1} />
       </View>
       <View style={{ paddingHorizontal: 24, marginTop: 24, gap: 12, flex: 1 }}>
         <T s="h2">어떤 말을 연습할까요?</T>
