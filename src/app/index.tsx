@@ -7,27 +7,29 @@ import { Lineup } from '../components/lineup';
 import { Logo } from '../components/logo';
 import { GoogleButton } from '../components/google-button';
 import { useAccount } from '../lib/useAccount';
+import { useT } from '../lib/i18n';
 // 01 웰컴
 
 export default function Welcome() {
   const { onboarded, languageSelected, setDemo } = useStore();
   const acc = useAccount();
+  const t = useT();
   // 이미 시작한 사람은 바로 홈으로 (새로고침해도 처음부터 다시 하지 않아요)
   if (onboarded) return <Redirect href={languageSelected ? '/home' : '/onboarding/lang'} />;
   return (
     <Screen bg={C.white}>
       <View style={{ paddingHorizontal: 24, marginTop: 56 }}>
-        <T s="h2">어서오세요!</T>
+        <T s="h2">{t('어서오세요!')}</T>
         <View style={{ marginTop: 10, marginBottom: 6 }}><Logo height={60} /></View>
-        <T s="sub">말실수해도 괜찮은 대화 연습장</T>
+        <T s="sub">{t('말실수해도 괜찮은 대화 연습장')}</T>
       </View>
       <View style={{ flex: 1, paddingHorizontal: 8, marginVertical: 16 }}>
         <Lineup />
       </View>
       <View style={{ paddingHorizontal: 16, gap: 8 }}>
-        <Btn label="시작하기" icon="arrow-right" onPress={() => router.push('/onboarding/lang')} />
+        <Btn label={t('시작하기')} icon="arrow-right" onPress={() => router.push('/onboarding/lang')} />
         <GoogleButton
-          label="Google로 로그인"
+          label={t('Google로 로그인')}
           busy={acc.busy}
           onPress={async () => {
             const r = await acc.login();
@@ -37,8 +39,8 @@ export default function Welcome() {
             }
           }}
         />
-        <Btn label="로그인 없이 시작하기" kind="ghost" small onPress={() => { setDemo(false); router.push('/onboarding/lang'); }} />
-        {acc.msg && acc.enabled !== false ? <T s="small" style={{ textAlign: 'center' }}>{acc.msg}</T> : null}
+        <Btn label={t('로그인 없이 시작하기')} kind="ghost" small onPress={() => { setDemo(false); router.push('/onboarding/lang'); }} />
+        {acc.msg && acc.enabled !== false ? <T s="small" style={{ textAlign: 'center' }}>{t(acc.msg)}</T> : null}
       </View>
     </Screen>
   );

@@ -9,6 +9,7 @@ import { speak, stopSpeak } from '../lib/voice';
 import { C, F } from '../lib/theme';
 import { useStore } from '../lib/store';
 import { Card, T, Tag } from './ui';
+import { useT } from '../lib/i18n';
 
 // 엔딩 (FE_MIGRATION_V2): 마지막 반응 대사(표정·자막·음성) → 정리 카드
 // 학습 판정(O·△·X·?)·점수와는 따로 보여 줘요. 결말 종류로 점수를 다시 계산하지 않아요.
@@ -17,6 +18,7 @@ export function EndingDialogue({ ending, char, sessionId, pack }: { ending: Endi
   const ch = CHARACTERS.find((c) => c.id === char) ?? CHARACTERS[0];
   const d = ending.dialogue;
   const { persona } = useStore();
+  const t = useT();
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
   const player = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
   const audio = useRef<string | null>(d?.audio ?? null);
@@ -73,19 +75,19 @@ export function EndingDialogue({ ending, char, sessionId, pack }: { ending: Endi
   return (
     <Card style={{ padding: 0, overflow: 'hidden' }}>
       <View style={{ backgroundColor: ending.image ? C.bg : '#EFEDE7', height: 300, alignItems: 'center', justifyContent: 'flex-end' }}>
-        <Image source={src} style={{ width: '100%', height: '100%' }} resizeMode="contain" accessibilityLabel={`${ch.name}의 마지막 표정`} />
+        <Image source={src} style={{ width: '100%', height: '100%' }} resizeMode="contain" accessibilityLabel={t('{name}의 마지막 표정', { name: t(ch.name) })} />
         <View style={{ position: 'absolute', top: 12, left: 12 }}>
-          <Tag label={ending.kind === 'happy' ? '해피 엔딩' : '아쉬운 엔딩'} tone={ending.kind === 'happy' ? 'lime' : 'white'} />
+          <Tag label={ending.kind === 'happy' ? t('해피 엔딩') : t('아쉬운 엔딩')} tone={ending.kind === 'happy' ? 'lime' : 'white'} />
         </View>
       </View>
       {d ? (
         <View style={{ padding: 16, gap: 6 }}>
-          <T s="label">{ch.name}</T>
+          <T s="label">{t(ch.name)}</T>
           <T style={{ fontFamily: F.b, fontSize: 20, lineHeight: 28, color: C.ink }}>{d.text}</T>
           {d.sub ? <T s="sub">{d.sub}</T> : null}
-          <Pressable onPress={play} accessibilityRole="button" accessibilityLabel={state === 'playing' ? '멈추기' : '마지막 대사 듣기'} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: C.bg, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14, marginTop: 4 }}>
+          <Pressable onPress={play} accessibilityRole="button" accessibilityLabel={state === 'playing' ? t('멈추기') : t('마지막 대사 듣기')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: C.bg, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14, marginTop: 4 }}>
             {state === 'loading' ? <ActivityIndicator size="small" color={C.ink} /> : <Feather name={state === 'playing' ? 'pause' : state === 'error' ? 'rotate-cw' : 'volume-2'} size={16} color={C.ink} />}
-            <T s="label">{state === 'playing' ? '멈추기' : state === 'error' ? '음성을 못 불러왔어요 · 다시 듣기' : '다시 듣기'}</T>
+            <T s="label">{state === 'playing' ? t('멈추기') : state === 'error' ? t('음성을 못 불러왔어요 · 다시 듣기') : t('다시 듣기')}</T>
           </Pressable>
         </View>
       ) : null}
@@ -94,12 +96,13 @@ export function EndingDialogue({ ending, char, sessionId, pack }: { ending: Endi
 }
 
 export function RecapCard({ ending }: { ending: Ending }) {
+  const t = useT();
   const r = ending.recap;
   // 정리 카드가 없는 예전 기록: 결말 제목·문장만
   if (!r) {
     return (
       <Card style={{ gap: 4 }}>
-        <T s="small">이야기의 결말</T>
+        <T s="small">{t('이야기의 결말')}</T>
         <T s="h3">{ending.title}</T>
         <T s="sub">{ending.text}</T>
       </Card>
@@ -109,12 +112,12 @@ export function RecapCard({ ending }: { ending: Ending }) {
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ gap: 2 }}>
-        <T s="small">한 줄 정리</T>
+        <T s="small">{t('한 줄 정리')}</T>
         <T s="h3">{tr?.title ?? r.title}</T>
         {tr && tr.title !== r.title ? <T s="small">{r.title}</T> : null}
       </View>
-      <Row k="이야기" a={tr?.story ?? r.story} b={tr ? r.story : undefined} />
-      <Row k="코멘트" a={tr?.comment ?? r.comment} b={tr ? r.comment : undefined} />
+      <Row k={t('이야기')} a={tr?.story ?? r.story} b={tr ? r.story : undefined} />
+      <Row k={t('코멘트')} a={tr?.comment ?? r.comment} b={tr ? r.comment : undefined} />
       <View style={{ backgroundColor: C.lime, borderRadius: 14, padding: 12, gap: 2 }}>
         <T s="label">{tr?.prompt ?? r.prompt}</T>
         {tr && tr.prompt !== r.prompt ? <T s="small" style={{ color: C.ink }}>{r.prompt}</T> : null}
