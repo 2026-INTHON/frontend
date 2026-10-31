@@ -23,6 +23,16 @@ jobs:
         run: |
           docker build -t malo-frontend:ci .
           docker run --rm --cap-drop ALL --security-opt no-new-privileges:true malo-frontend:ci caddy version
+          docker run -d --name frontend-smoke --cap-drop ALL --security-opt no-new-privileges:true -p 127.0.0.1:8080:8080 malo-frontend:ci
+          trap 'docker logs frontend-smoke; docker rm -f frontend-smoke' EXIT
+          for attempt in $(seq 1 20); do
+            if [ "$(curl -fsS http://127.0.0.1:8080/healthz 2>/dev/null)" = ok ]; then
+              curl -fsS http://127.0.0.1:8080/ | grep -q '_expo/'
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
 
   release:
     needs: check
