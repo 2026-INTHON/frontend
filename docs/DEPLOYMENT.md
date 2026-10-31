@@ -16,3 +16,7 @@
 Frontend listens on VM loopback port 8080 and is served through the existing HTTPS gateway. API, docs, AI and model paths retain their existing routes. The HTTP 8080 listener is intended for VM checks or an SSH tunnel; microphone testing uses HTTPS.
 
 The frontend repository has `VM_SSH_PRIVATE_KEY` for the FE developer's `malo-fe` SSH account. The account has no Docker group membership and may invoke only the frontend deployment command through sudo. Use this key only privately; never commit it. An FE developer on another network must have their public IP added to the existing Azure SSH allowlist before direct SSH access is possible.
+
+Public FE endpoint: https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.com/
+
+Merging to main starts checks; successful checks publish a release, then the VM polls and deploys it. A merge or a green PR check alone does not mean the VM has already switched versions. Keep develop as the integration branch and use a develop-to-main release PR. Direct public HTTP port 8080 is not opened; use the HTTPS URL for phone access and microphone permissions.
