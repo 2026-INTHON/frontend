@@ -448,8 +448,8 @@ export default function SceneScreen() {
   return (
     <ImageBackground source={E?.bg ? { uri: E.bg } : IMG.bg[place]} style={{ flex: 1, width: '100%', backgroundColor: C.bg }} imageStyle={{ width: '100%', height: '100%' }} resizeMode="cover">
       <View style={{ ...absFill, backgroundColor: TONE[place] }} />
-      {/* 서버 표정 이미지는 배경이 있어서 앱 안 투명 PNG를 쓰고, 감정 말풍선·효과음만 서버 감정으로 */}
-      <CharacterActor uri={null} fallback={IMG.char[charId]} emotion={line.emotion} eventKey={out ? (out.replyLine.turnId ?? String(log.length)) : ''}
+      {/* 서버 표정 이미지(없거나 못 불러오면 앱 그림) + 감정 말풍선·효과음 */}
+      <CharacterActor uri={out?.render ?? E?.render ?? null} fallback={IMG.char[charId]} emotion={line.emotion} eventKey={out ? (out.replyLine.turnId ?? String(log.length)) : ''}
         top={ins.top + 64} name={t(ch.name)} lang={st.lang} sound={st.soundEffects} active={ready && phase !== 'brief' && !pause && !listening && !busy} />
       {/* 아래로 갈수록 점점 흐려지는 그라데이션 (경계선 없이) */}
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}>
