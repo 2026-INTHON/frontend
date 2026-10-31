@@ -22,6 +22,18 @@ const profiles={
 };
 export const profileCopy=(lang:string)=>profiles[lang as keyof typeof profiles]??profiles.en;
 
+const speechErrors={
+ ko:{quota:'오늘 준비된 음성 생성량을 모두 사용했어요. 자막으로 계속 대화할 수 있어요.',retry:'캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.'},
+ en:{quota:'Today’s voice generation limit has been reached. You can keep chatting with subtitles.',retry:'Could not load the character voice. Tap replay to try again.'},
+ ja:{quota:'本日の音声生成上限に達しました。字幕で会話を続けられます。',retry:'キャラクターの音声を読み込めませんでした。再生ボタンでもう一度お試しください。'},
+ zh:{quota:'今天的语音生成额度已用完。你可以通过字幕继续对话。',retry:'无法加载角色语音，请点击重播重试。'},
+};
+export function speechErrorCopy(error:unknown,lang:string){
+ const code=error&&typeof error==='object'&&'code' in error?error.code:null;
+ const text=speechErrors[lang as keyof typeof speechErrors]??speechErrors.en;
+ return code==='DAILY_QUOTA_EXCEEDED'?text.quota:text.retry;
+}
+
 // Never display subtitles left over from another selected language.
 export const subtitleText = (value: { language: string; text: string } | null | undefined, lang: string) =>
   lang !== 'ko' && value?.language === lang ? value.text : null;

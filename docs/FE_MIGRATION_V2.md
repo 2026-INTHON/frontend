@@ -1,5 +1,24 @@
 # FE Migration V2 — 엔딩 대사·정리 카드·추가 감정 이미지
 
+## 간결한 다국어 보고서 (2026-11-01)
+
+`GET/POST /sessions/{id}/report?language=ko|en|ja|zh`와 `POST /sessions/{id}/report/retry?language=...`에 **현재 UI 선택 언어**를 보낸다. 학습 pack은 계속 ko다. 서버는 `report-v2-concise`와 언어별로 보고서를 캐시하며 기존 긴 v1 보고서는 새 형식으로 준비한다. 생성 중에는 다른 학습을 계속할 수 있다.
+
+- 종합: 한 줄 요약 + `strengths`(잘한 점), `improvements`(개선할 점), `shortcomings`(아쉬운 점), `culturalTakeaways`(문화 팁). 섹션별 최대 두 개의 짧은 문장.
+- 대화별: `details[].coaching`에 같은 세 가지 피드백 배열, `implicitIntent`, `culturalContext`, 한국어 `alternativeExpression`을 제공한다. 재시도도 각각 별도로 분석하며 점수나 기존 판정을 변경하지 않는다.
+- FE는 각 대화를 독립적으로 펼치는 카드로 표시한다. 설명·섹션 제목은 선택 언어만, 실제 한국어 대사·추천 표현은 원문으로 표시한다. 과거 `feedback`, `praise`, `evaluation.reason`을 설명으로 중복 렌더링하지 않는다.
+- 언어 변경 시 이전 언어 응답을 폐기하고 새 보고서를 요청한다. 보이지 않는 탭에서는 조회를 멈추며 요청이 겹치지 않게 완료 후 4초 간격으로 조회한다.
+
+2026-11-01 교수 음성 장애: 생성기 자체 오류가 아니라 서버 내부 Typecast 일일 4,000자 제한 도달이었다. 무료 플랜·결제 수단 없음·잔여 9,623크레딧을 확인한 후 운영 `MALO_TYPECAST_TTS_DAILY_CHAR_LIMIT`만 8,000으로 조정했다. 공급자 월 한도·결제 설정은 변경하지 않았다. FE는 `DAILY_QUOTA_EXCEEDED`를 보존해 선택 언어로 한도 안내를 표시하고 자막 대화를 계속 허용한다. 캐시 재생은 신규 생성량에 포함되지 않는다.
+
+## 실제 대화 맥락·말투 유지 (2026-11-01)
+
+- FE live 엔진은 응답의 `turn.npcReply`를 표시하고, 이어지는 대화도 `session.npc.text`를 그대로 사용한다. 로컬 대본으로 덮어쓰지 않는다. △·?에서도 서버가 생성한 실제 후속 질문을 이어 간다.
+- `session.npc.speechLevel`, `turn.npcSpeechLevel`은 `polite | casual`이다. FE `Line.speechLevel`로 전달하며 화면에 별도 배지를 강제하지 않는다. 기존 응답에는 없어도 정상 작동한다.
+- BE는 시작 말투와 합의한 변경을 저장한다. '말투 변화' 챕터 제목, 사용자의 반말, 다음 대본만으로 캐릭터가 반말로 전환하지 않는다. 명시적으로 다시 말하기를 누르면 당시 질문과 말투를 복구한다.
+- AI는 실제 질문·답변·최근 12개 대화와 인물 프로필을 우선한다. 다음 대본의 완성된 문장을 실시간 입력에서 제거했다. '담백한 음식 좋아하세요?'에는 취향을 답하고, '다음에는 미리 알려줄게'라는 약속을 받았다면 다시 같은 약속을 요구하지 않는다.
+- 이 변경은 FE 타입·실시간 엔진에도 반영했다. 기존 API의 텍스트·선택 언어 자막·TTS 동기화, 자발적으로 여는 피드백 모달 동작을 유지한다.
+
 2026-11-01 재생·운영 수정: 데모 대사도 `POST /api/v1/speech/preview`로 같은 캐릭터 음성을 받는다. `{text,pack,characterId,personalityId,emotion}`을 보내며 인증·기존 TTS 한도·캐시가 적용되고 학습 기록은 만들지 않는다. 오프라인에서는 대사와 다시 듣기를 제공하고 기기 나레이션으로 조용히 대체하지 않는다. `demo`·언어·캐릭터·성격이 바뀌면 열린 장면도 새 엔진으로 시작한다. 실학습 기본값은 live이고 운영 mock 채점은 차단한다.
 
 배포 시 정적 JS/에셋은 VM 공유 저장소에 이전 버전과 함께 보존한다. 앱 HTML은 no-store, 없는 정적 파일은 HTML 대신 404를 반환한다. Google 운영 Site URL과 `/auth/callback` 허용 주소도 실제 HTTPS 도메인을 사용한다.
