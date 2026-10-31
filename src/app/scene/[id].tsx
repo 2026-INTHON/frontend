@@ -63,6 +63,7 @@ export default function SceneScreen() {
   const [rtStat, setRtStat] = useState({ ms: 0, level: -60 });
   const player = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
   const voiceRequest = useRef(0);
+  const loadRequest = useRef(0);
 
   const E = eng.current;
   const charId = E?.char ?? st.char;
@@ -78,7 +79,7 @@ export default function SceneScreen() {
     return start();
   }
   function start() {
-    let alive = true;
+    const request = ++loadRequest.current;
     setReady(false);
     setLoadErr(null);
     setPhase('brief');
@@ -87,23 +88,21 @@ export default function SceneScreen() {
     eng.current = null;
     createEngine(sceneId, { demo: st.demo, pack: st.pack, lang: st.lang, char: st.char, persona: st.persona, retryOf: retryOf ? String(retryOf) : undefined })
       .then((e) => {
-        if (!alive) return;
+        if (request !== loadRequest.current) return;
         eng.current = e;
         setHearts(e.lives);
         setLine(e.line);
         setReady(true);
         st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, char: e.char, persona: e.persona, status: 'playing', progress: e.progress(), at: new Date().toISOString() } });
       })
-      .catch((err) => alive && setLoadErr(err instanceof SceneError ? err.message : '장면을 불러오지 못했어요.'));
-    return () => {
-      alive = false;
-    };
+      .catch((err) => request === loadRequest.current && setLoadErr(err instanceof SceneError ? err.message : '장면을 불러오지 못했어요. 다시 시도해 주세요.'));
   }
+  function invalidateLoad() { loadRequest.current++; }
   useEffect(() => {
     if (!st.hydrated) return;
-    const off = start();
+    start();
     return () => {
-      off();
+      invalidateLoad();
       voiceRequest.current++;
       stopSpeak();
       player.current?.remove();
@@ -553,7 +552,7 @@ export default function SceneScreen() {
             {loadErr ? (
               <>
                 <T s="h2">장면을 열지 못했어요</T>
-                <T s="sub">{loadErr} 잠시 뒤 다시 시도해 주세요.</T>
+                <T s="sub">{loadErr}</T>
                 <Btn label="다시 시도" icon="rotate-cw" onPress={() => { load(); }} />
                 {!st.demo ? <Btn label="데모 대본으로 해 보기" kind="line" onPress={() => { st.setDemo(true); router.replace({ pathname: '/scene/[id]', params: { id: 'today' } }); }} /> : null}
                 <Btn label="홈으로" kind="ghost" onPress={() => router.replace('/home')} />

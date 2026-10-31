@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test:voice": "node --test tests/voice.test.mjs",
+    "test:voice": "node --test tests/*.test.mjs",
     "build:web": "expo export -p web",
     "preview:web": "npx serve dist -s",
     "lint": "eslint src"
