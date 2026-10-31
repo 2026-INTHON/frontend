@@ -39,7 +39,6 @@ export default function SceneScreen() {
   const [answer, setAnswer] = useState('');
   const [line, setLine] = useState<Line>({ line: '' });
   const [lineMark, setLineMark] = useState<Mark | null>(null); // F안: 반응 말풍선 배지
-  const [render, setRender] = useState<string | null>(null); // 서버가 고른 표정 이미지
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [sendErr, setSendErr] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -85,7 +84,6 @@ export default function SceneScreen() {
         eng.current = e;
         setHearts(e.lives);
         setLine(e.line);
-        setRender(e.render);
         setReady(true);
         st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, char: e.char, persona: e.persona, status: 'playing', progress: e.progress(), at: new Date().toISOString() } });
       })
@@ -137,7 +135,6 @@ export default function SceneScreen() {
   function showLine(l: Line) {
     setLine(l);
     setLineMark(null);
-    setRender(eng.current?.render ?? null);
     setLog((g) => [...g, { who: 'char', text: l.line }]);
     play(l);
   }
@@ -270,7 +267,6 @@ export default function SceneScreen() {
     setLine(o.replyLine);
     setLineMark(o.mark);
     play(o.replyLine);
-    if (o.render) setRender(o.render);
     setPhase('reaction');
     if (o.ok) haptic.good();
     else {
@@ -297,7 +293,6 @@ export default function SceneScreen() {
   function retry() {
     setLine(eng.current!.line);
     setLineMark(null);
-    setRender(eng.current!.render);
     setHintNudge(true);
     setPhase('talk');
   }
@@ -383,7 +378,8 @@ export default function SceneScreen() {
     <ImageBackground source={E?.bg ? { uri: E.bg } : IMG.bg[place]} style={{ flex: 1, width: '100%', backgroundColor: C.bg }} imageStyle={{ width: '100%', height: '100%' }} resizeMode="cover">
       <View style={{ ...absFill, backgroundColor: TONE[place] }} />
       {/* 캐릭터: 서버가 고른 표정 이미지가 있으면 그걸로 */}
-      <Image source={render ? { uri: render } : IMG.char[charId]} style={{ position: 'absolute', top: ins.top + 64, alignSelf: 'center', width: '62%', height: '72%' }} resizeMode="contain" accessibilityLabel={`${ch.name} 캐릭터`} />
+      {/* 서버 표정 이미지는 흰 배경이 있어서, 배경 없는 앱 안 캐릭터 PNG를 써요 */}
+      <Image source={IMG.char[charId]} style={{ position: 'absolute', top: ins.top + 64, alignSelf: 'center', width: '62%', height: '72%' }} resizeMode="contain" accessibilityLabel={`${ch.name} 캐릭터`} />
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '42%', backgroundColor: 'rgba(243,242,238,0.72)' }} />
 
       {/* 상단 단축바 */}
@@ -500,7 +496,7 @@ export default function SceneScreen() {
                 placeholderTextColor={C.sub}
                 onSubmitEditing={() => send(text)}
                 returnKeyType="send"
-                style={{ flex: 1, fontFamily: F.r, fontSize: 15, color: C.ink, paddingVertical: 12, outlineStyle: 'none' } as any}
+                style={{ flex: 1, minWidth: 0, width: 0, fontFamily: F.r, fontSize: 15, color: C.ink, paddingVertical: 12, outlineStyle: 'none' } as any}
               />
               <IconBtn name="mic" size={40} bg={C.bg} label="음성으로 말하기" onPress={() => setPhase('talk')} />
               <View style={{ width: 6 }} />
