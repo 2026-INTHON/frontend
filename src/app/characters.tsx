@@ -8,13 +8,15 @@ import { C } from '../lib/theme';
 import { CHARACTERS, IMG, PERSONAS, CharId } from '../lib/data';
 import { useStore } from '../lib/store';
 
-// 10 캐릭터 목록 · 캐릭터를 누르면 꾸미기로 이어져요
+// 10 캐릭터 목록 · 카드를 누르면 그 캐릭터로 바뀌고, 꾸미기는 버튼으로
 export default function Characters() {
   const st = useStore();
   const [pw, setPw] = useState(false);
   const [pick, setPick] = useState<CharId | null>(null);
-  const prog: Record<string, string> = { seoyun: 'EP 2 진행 중', prof: 'EP 1 완료' };
-  const cur: Record<string, string> = { seoyun: '장난', prof: '차분' };
+  // 고르면 바로 저장 (뒤로 가도 그대로). 성격은 지금 성격을 유지하고, 없으면 차분
+  const choose = (id: CharId) => st.set({ char: id, persona: PERSONAS[id].some((p) => p.id === st.persona) ? st.persona : 'calm' });
+  const personaName = (id: CharId) => (PERSONAS[id].find((p) => p.id === (st.char === id ? st.persona : 'calm')) ?? PERSONAS[id][0]).name;
+  const progressOf = (id: CharId) => (st.lastPlayed?.char === id ? (st.lastPlayed.status === 'done' ? `${st.lastPlayed.title || '장면'} 완료` : `${st.lastPlayed.title || '장면'} 하는 중`) : null);
   return (
     <Screen>
       <TopBar title="캐릭터" right={<CoinPill />} />
@@ -23,7 +25,7 @@ export default function Characters() {
         {CHARACTERS.map((c) => {
           const open = c.free || st.subscribed;
           return (
-            <Pressable key={c.id} onPress={() => (open ? router.push({ pathname: '/dress', params: { c: c.id } }) : setPw(true))} style={{ flexDirection: 'row', gap: 14, backgroundColor: C.white, borderRadius: 20, padding: 12, borderWidth: st.char === c.id ? 2 : 0, borderColor: C.ink }}>
+            <Pressable key={c.id} onPress={() => (open ? choose(c.id) : setPw(true))} accessibilityRole="button" accessibilityState={{ selected: st.char === c.id }} accessibilityLabel={`${c.name} 고르기`} style={{ flexDirection: 'row', gap: 14, backgroundColor: C.white, borderRadius: 20, padding: 12, borderWidth: st.char === c.id ? 2 : 0, borderColor: C.ink }}>
               <View style={{ width: 96, height: 112, borderRadius: 14, backgroundColor: '#F8F8F9', overflow: 'hidden' }}>
                 <Image source={IMG.char[c.id]} style={{ width: 96, height: 290, marginTop: 6, opacity: open ? 1 : 0.4 }} resizeMode="contain" />
                 {!open ? <Feather name="lock" size={22} color={C.ink} style={{ position: 'absolute', top: 44, left: 37 }} /> : null}
@@ -35,11 +37,14 @@ export default function Characters() {
                 </View>
                 {open ? (
                   <>
-                    <Tag label={`성격 · ${cur[c.id] ?? '까탈'}`} />
-                    <T s="small">{prog[c.id] ?? '새 캐릭터'}</T>
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      {st.char === c.id ? <Tag label="대화 중" tone="lime" /> : null}
+                      <Tag label={`성격 · ${personaName(c.id)}`} />
+                    </View>
+                    {progressOf(c.id) ? <T s="small">{progressOf(c.id)}</T> : null}
                     <View style={{ flexDirection: 'row', gap: 6, alignSelf: 'flex-end' }}>
-                      <Chip label="꾸미기" on onPress={() => router.push({ pathname: '/dress', params: { c: c.id } })} />
-                      <Chip label="성격 바꾸기" onPress={() => setPick(c.id)} />
+                      <Chip label="꾸미기" on onPress={() => { choose(c.id); router.push({ pathname: '/dress', params: { c: c.id } }); }} />
+                      <Chip label="성격 바꾸기" onPress={() => { choose(c.id); setPick(c.id); }} />
                     </View>
                   </>
                 ) : (

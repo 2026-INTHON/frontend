@@ -15,8 +15,9 @@ export default function Home() {
   const st = useStore();
   const acc = useAccount();
   const ins = useSafeAreaInsets();
-  const lp = st.lastPlayed;
-  const charId = lp?.char ?? st.char;
+  // 캐릭터를 바꿨으면 그 캐릭터 기준으로 (이전 캐릭터의 이어하기는 숨겨요)
+  const lp = st.lastPlayed && st.lastPlayed.char === st.char ? st.lastPlayed : null;
+  const charId = st.char;
   const personaId = lp?.persona ?? st.persona;
   const c = charById(charId);
   const p = PERSONAS[charId].find((x) => x.id === personaId) ?? PERSONAS[charId][2];
