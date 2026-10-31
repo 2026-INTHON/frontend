@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Btn, Screen, T } from '../../components/ui';
-import { C, F } from '../../lib/theme';
-import { CHARACTERS, IMG } from '../../lib/data';
+import { Btn, Screen, T, TopBar } from '../../components/ui';
+import { C } from '../../lib/theme';
 import { useStore } from '../../lib/store';
-import { Lineup } from '../../components/lineup';
 
 const PACKS = [
   { id: 'ko' as const, name: '한국어팩', desc: '회사 · 학교 · 친구 사이 한국어 대화', icon: 'globe' as const },
@@ -20,19 +18,15 @@ export default function Pack() {
   const [sel, setSel] = useState(pack);
   return (
     <Screen>
-      <View style={{ paddingHorizontal: 24, marginTop: 24 }}>
-        <T style={{ fontFamily: F.logo, fontSize: 44, lineHeight: 54 }}>Malo</T>
-        <T s="sub">말실수해도 괜찮은 대화 연습장</T>
-      </View>
-      <View style={{ height: 220, marginHorizontal: 24, marginTop: 16, borderRadius: 20, backgroundColor: '#F8F8F9', overflow: 'hidden', paddingTop: 12, paddingHorizontal: 8 }}>
-        <Lineup fill={1} />
-      </View>
-      <View style={{ paddingHorizontal: 24, marginTop: 24, gap: 12, flex: 1 }}>
-        <T s="h2">어떤 말을 연습할까요?</T>
+      <TopBar />
+      {/* 작은 화면에서도 선택지가 버튼에 가리지 않게 본문만 스크롤 */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 24, gap: 12 }}>
+        <T s="h1">어떤 말을 연습할까요?</T>
+        <T s="sub" style={{ marginBottom: 4 }}>상황 속 캐릭터와 대화하며 뉘앙스를 익혀요</T>
         {PACKS.map((p) => {
           const on = sel === p.id;
           return (
-            <Pressable key={p.id} onPress={() => setSel(p.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20, borderRadius: 20, backgroundColor: on ? C.lime : C.white, borderWidth: on ? 2 : 1, borderColor: on ? C.ink : C.line }}>
+            <Pressable key={p.id} onPress={() => setSel(p.id)} accessibilityRole="button" accessibilityState={{ selected: on }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20, borderRadius: 20, backgroundColor: on ? C.lime : C.white, borderWidth: on ? 2 : 1, borderColor: on ? C.ink : C.line }}>
               <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: on ? C.ink : C.bg, alignItems: 'center', justifyContent: 'center' }}>
                 <Feather name={p.icon} size={20} color={on ? C.lime : C.ink} />
               </View>
@@ -44,8 +38,8 @@ export default function Pack() {
             </Pressable>
           );
         })}
-      </View>
-      <View style={{ paddingHorizontal: 16, gap: 8 }}>
+      </ScrollView>
+      <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 8 }}>
         <Btn
           label="다음"
           icon="arrow-right"

@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { Btn, Sheet, T, Tag } from './ui';
 import { C, F } from '../lib/theme';
 import { useStore } from '../lib/store';
+import { Logo } from './logo';
 
 const ROWS = [
   ['학습 상황', '2개', '전체'],
@@ -15,7 +16,7 @@ export function Paywall({ visible, onClose }: { visible: boolean; onClose: () =>
   return (
     <Sheet visible={visible} onClose={onClose}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <T style={{ fontFamily: F.logo, fontSize: 30 }}>Malo</T>
+        <Logo height={28} />
         <Tag label="PRO" tone="lime" />
       </View>
       <T s="h3" style={{ marginTop: 10 }}>모든 학습 상황을 열어 보세요</T>

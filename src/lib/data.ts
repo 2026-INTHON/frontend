@@ -59,7 +59,8 @@ export const PERSONAS: Record<CharId, Persona[]> = {
 
 // ---- 장면 스크립트 (AI 연결 전 고정 데이터) ----
 export type Cue = { k: '표정' | '억양' | '망설임' | '침묵' | '행동'; v: string };
-export type Line = { line: string; action?: string; cues?: Cue[] };
+// sub: 선택 언어 자막, audio: 서버가 준 그 대사 음성 URL, turnId: 반응 대사면 해당 턴 (다시 듣기용)
+export type Line = { line: string; action?: string; cues?: Cue[]; sub?: string | null; audio?: string | null; turnId?: string };
 export type Turn = Line & {
   byPersona?: Partial<Record<PersonaId, Line>>; // 성격마다 다른 말투·단서
   clue: { focus: string; act: string; ctx: string }; // 힌트 1단계: 주목 표현 · 행동 · 상황 단서
@@ -203,8 +204,17 @@ export const SCENES: Scene[] = [
   },
 ];
 export const lineFor = (t: Turn, p: PersonaId): Line => ({ line: t.line, action: t.action, cues: t.cues, ...(t.byPersona?.[p] ?? {}) });
-export const sceneById = (id: string) => SCENES.find((s) => s.id === id) ?? SCENES[0];
-export const sceneForChar = (c: CharId) => SCENES.find((s) => s.char === c) ?? SCENES[0];
+// 데모 모드 전용: 앱 안 대본 찾기. 없으면 undefined (다른 장면으로 몰래 바꾸지 않아요)
+export const sceneById = (id: string) => SCENES.find((s) => s.id === id);
+// 데모 모드에서 캐릭터에 맞는 첫 장면 (준호는 데모 대본이 없어서 서윤 장면)
+export const sceneForChar = (c: CharId) => SCENES.find((s) => s.char === c) ?? SCENES.find((s) => s.char === 'seoyun')!;
+
+// 서버 ID ↔ 앱 표시용 키 (BE DB: girlfriend/friend/manager/professor, playful/strict/calm)
+export const SERVER_CHAR: Record<CharId, string> = { seoyun: 'girlfriend', junho: 'friend', boss: 'manager', prof: 'professor' };
+export const SERVER_PERSONA: Record<PersonaId, string> = { tease: 'playful', picky: 'strict', calm: 'calm' };
+export const charFromServer = (id?: string | null, fb: CharId = 'seoyun'): CharId => (Object.keys(SERVER_CHAR) as CharId[]).find((k) => SERVER_CHAR[k] === id || k === id) ?? fb;
+export const personaFromServer = (id?: string | null, fb: PersonaId = 'calm'): PersonaId => (Object.keys(SERVER_PERSONA) as PersonaId[]).find((k) => SERVER_PERSONA[k] === id || k === id) ?? fb;
+export const PLACE_OF: Record<CharId, Place> = { boss: 'office', seoyun: 'cafe', prof: 'street', junho: 'street' };
 
 export const LANGS = [
   { id: 'en', name: 'English', ko: '영어' },

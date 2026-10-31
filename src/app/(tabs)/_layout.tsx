@@ -4,11 +4,13 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '../../components/ui';
 import { C } from '../../lib/theme';
+import { useServerRecords } from '../../lib/sync';
 
 const ICON: Record<string, keyof typeof Feather.glyphMap> = { home: 'home', mistakes: 'book', stats: 'bar-chart-2' };
 const LABEL: Record<string, string> = { home: '홈', mistakes: '오답 도감', stats: '내 기록' };
 
 export default function TabsLayout() {
+  useServerRecords(); // 코인·기록·오답은 서버 값 우선
   return (
     <Tabs
       screenOptions={{ headerShown: false }}
