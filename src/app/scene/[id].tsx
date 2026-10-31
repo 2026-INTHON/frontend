@@ -14,7 +14,7 @@ import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
 import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
 import { useStore } from '../../lib/store';
-import { learningCopy, reactionCopy } from '../../lib/learning-copy';
+import { learningCopy, reactionCopy, speechErrorCopy } from '../../lib/learning-copy';
 import { CharacterActor } from '../../components/character-actor';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized' | 'reaction';
@@ -167,15 +167,15 @@ export default function SceneScreen() {
         player.current = pl;
         pl.addListener('playbackStatusUpdate', (s) => {
           if (request !== voiceRequest.current) return;
-          if (s.error) { setPlaying(false); setNotice('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.'); }
+          if (s.error) { setPlaying(false); setNotice(speechErrorCopy(s.error,st.lang)); }
           else if (s.didJustFinish) setPlaying(false);
         });
         pl.play();
         return;
-    } catch {
+    } catch (error) {
       if (request !== voiceRequest.current) return;
       setPlaying(false);
-      setNotice('캐릭터 음성을 불러오지 못했어요. 다시 듣기를 눌러 주세요.');
+      setNotice(speechErrorCopy(error,st.lang));
     }
   }
   function stopPlay() {
