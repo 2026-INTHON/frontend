@@ -59,7 +59,7 @@ export function Cues({ cues }: { cues?: { k: string; v: string }[] }) {
       {cues.map((c, i) => (
         <View key={i} style={{ maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 9, paddingVertical: 4 }}>
           <Feather name={CUE_ICON[c.k] ?? 'eye'} size={11} color={C.sub} />
-          <T s="small" style={{ flexShrink: 1, color: C.ink, fontSize: 12 }}>{t(c.k)} · {c.v}</T>
+          <T s="small" style={{ flexShrink: 1, color: C.ink, fontSize: 12 }}>{t(c.k)} · {t(c.v)}</T>
         </View>
       ))}
     </View>

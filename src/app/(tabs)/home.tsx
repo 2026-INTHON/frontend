@@ -52,12 +52,14 @@ export default function Home() {
       : 0;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ flexGrow: 1, paddingTop: Math.max(ins.top, 12) + 12 }}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    {/* 작은 화면: 본문만 스크롤, 시작 버튼은 아래에 따로 고정 (본문을 덮지 않게) */}
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingTop: Math.max(ins.top, 12) + 12, paddingBottom: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, gap: 8 }}>
         <T s="h2" style={{ flex: 1 }}>{name ? t('{name}님, 오늘도 한 장면만', { name }) : t('오늘도 한 장면만 해 볼까요?')}</T>
         <IconBtn name="settings" size={36} onPress={() => router.push('/settings')} />
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, marginTop: 8, gap: 8 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', paddingHorizontal: 24, marginTop: 8, gap: 8 }}>
         {st.streak > 0 ? <Tag label={`🔥 ${t('연속 {n}일', { n: st.streak })}`} tone="white" /> : <Tag label={t('오늘 첫 장면을 끝내면 연속 1일')} tone="white" />}
         {st.demo ? <Tag label={t('체험 중')} tone="grey" /> : null}
         <View style={{ flex: 1 }} />
@@ -65,7 +67,7 @@ export default function Home() {
       </View>
 
       {/* 오늘의 장면 / 이어하기 */}
-      <View style={{ flex: 1, minHeight: 340, marginHorizontal: 24, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
+      <View style={{ flex: 1, minHeight: 300, marginHorizontal: 24, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
         <Image source={IMG.bg[PLACE_OF[charId]]} style={{ position: 'absolute', width: '100%', height: '100%' }} resizeMode="cover" />
         {/* 사진 위에 정보 카드가 겹치는 홈 구성. 프로필은 위쪽 사진 영역에서만 펼쳐져요. */}
         <Image source={IMG.char[charId]} style={{ position: 'absolute', top: 18, left: '31%', width: '62%', height: '96%' }} resizeMode="contain" />
@@ -87,10 +89,11 @@ export default function Home() {
         <Tile icon="grid" t={t('다른 장면')} s={t('챕터 목록')} onPress={() => router.push('/episodes')} />
         <Tile icon="user" t={t('대화 상대')} s={t('캐릭터 목록')} onPress={() => router.push('/characters')} />
       </View>
-      <View style={{ paddingHorizontal: 24, paddingVertical: 12 }}>
+    </ScrollView>
+      <View style={{ paddingHorizontal: 24, paddingVertical: 10, backgroundColor: C.bg }}>
         <Btn label={next.btn} icon="play" onPress={go} />
       </View>
-    </ScrollView>
+    </View>
   );
 }
 

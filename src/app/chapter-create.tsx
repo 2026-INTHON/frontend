@@ -57,9 +57,9 @@ export default function ChapterCreate() {
           ))}
         </View>
         <T s="label">{t('성격')}</T>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {PERSONAS[char].map((p) => (
-            <Chip key={p.id} label={p.name} on={persona === p.id} onPress={() => setPersona(p.id)} />
+            <Chip key={p.id} label={t(p.name)} on={persona === p.id} onPress={() => setPersona(p.id)} />
           ))}
         </View>
         <T s="label">{t('어떤 상황을 연습할까요?')}</T>

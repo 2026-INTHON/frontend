@@ -45,7 +45,7 @@ export default function Mistakes() {
             </View>
             <T s="body" style={{ marginTop: 8, color: C.red, textDecorationLine: 'line-through' }}>"{m.said}"</T>
             <T s="body" style={{ marginTop: 4 }}>"{m.better}"</T>
-            {!m.fixed ? <Btn label={t('다시 연습하기')} small kind="line" style={{ alignSelf: 'flex-start', marginTop: 10 }} onPress={() => router.push({ pathname: '/mistake/[id]', params: { id: m.id } })} /> : null}
+            {!m.fixed ? <Btn label={t('다시 연습하기')} small kind="line" icon="rotate-ccw" style={{ alignSelf: 'flex-start', marginTop: 10 }} onPress={() => router.push({ pathname: '/scene/[id]', params: { id: m.scene || 'today' } })} /> : null}
           </Card>
         ))}
       </ScrollView>

@@ -88,7 +88,7 @@ export default function Episodes() {
         ))}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 24 }}>
-        <Tag label={c.role} tone="white" />
+        <Tag label={t(c.role)} tone="white" />
         <Tag label={`${t('성격')} · ${t(persona.name)}`} tone="white" />
         {st.demo ? <Tag label={t('예시 대화')} tone="grey" /> : null}
       </View>

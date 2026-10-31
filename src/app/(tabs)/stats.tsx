@@ -53,7 +53,7 @@ export default function Stats() {
       ) : (
         <Card style={{ gap: 10 }}>
           <T s="h3">{t('첫 장면을 시작해 보세요')}</T>
-          <Btn label={t('장면 시작하기')} small icon="play" onPress={() => router.push('/home')} />
+          <Btn label={t('장면 시작하기')} small icon="play" onPress={() => router.push({ pathname: '/scene/[id]', params: { id: 'today' } })} />
         </Card>
       )}
       {recent.length ? (

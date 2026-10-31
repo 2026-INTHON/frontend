@@ -197,15 +197,15 @@ export default function Result() {
         ) : null}
       </ScrollView>
       <View style={{ paddingHorizontal: 16, gap: 8 }}>
-        {retryTarget ? <Btn label={t('틀린 문장 다시 말해 보기')} icon="mic" onPress={() => router.push({ pathname: '/mistake/[id]', params: { id: retryTarget } })} /> : null}
+        {retryTarget ? <Btn label={t('틀린 문장 복습하기')} icon="book-open" onPress={() => router.push({ pathname: '/mistake/[id]', params: { id: retryTarget } })} /> : null}
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {/* 버튼 이름 = 실제 이동 */}
           {next ? (
-            <Btn label={t('다음 장면')} kind={retryTarget ? 'line' : 'dark'} icon="arrow-right" style={{ flex: 1 }} onPress={() => router.replace({ pathname: '/scene/[id]', params: { id: next } })} />
+            <Btn label={t('다음 장면')} small={!!retryTarget} kind={retryTarget ? 'line' : 'dark'} icon="arrow-right" style={{ flex: 1 }} onPress={() => router.replace({ pathname: '/scene/[id]', params: { id: next } })} />
           ) : (
-            <Btn label={t('다시 연습하기')} kind={retryTarget ? 'line' : 'dark'} icon="rotate-ccw" style={{ flex: 1 }} onPress={() => router.replace({ pathname: '/scene/[id]', params: live ? { id: r.sceneId, retryOf: r.sessionId! } : { id: r.sceneId } })} />
+            <Btn label={t('다시 연습하기')} small={!!retryTarget} kind={retryTarget ? 'line' : 'dark'} icon="rotate-ccw" style={{ flex: 1 }} onPress={() => router.replace({ pathname: '/scene/[id]', params: live ? { id: r.sceneId, retryOf: r.sessionId! } : { id: r.sceneId } })} />
           )}
-          <Btn label={t('홈으로')} kind="ghost" icon="home" style={{ flex: 0.8 }} onPress={() => router.replace('/home')} />
+          <Btn label={t('홈으로')} small={!!retryTarget} kind="ghost" icon="home" style={{ flex: 0.8 }} onPress={() => router.replace('/home')} />
         </View>
       </View>
     </Screen>

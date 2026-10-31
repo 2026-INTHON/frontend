@@ -26,6 +26,10 @@ const ts = StyleSheet.create({
 });
 
 type BtnProps = { label: string; onPress?: () => void; icon?: keyof typeof Feather.glyphMap; kind?: 'dark' | 'lime' | 'line' | 'ghost'; style?: ViewStyle; disabled?: boolean; small?: boolean };
+// 번역 문구가 길면 글자 크기를 조금 줄여 한 줄에 (한·중·일 글자는 2칸으로 셈)
+const textWidth = (s: string) => [...s].reduce((n, ch) => n + (/[\u1100-\uFFDC]/.test(ch) ? 2 : 1), 0);
+export const fitSize = (label: string, base: number, room = 22) => { const w = textWidth(label); return w > room * 1.4 ? base - 3 : w > room ? base - 2 : base; };
+
 export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, small }: BtnProps) {
   const bg = kind === 'dark' ? C.ink : kind === 'lime' ? C.lime : kind === 'line' ? C.white : 'transparent';
   const fg = kind === 'dark' ? C.white : C.ink;
@@ -36,12 +40,12 @@ export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, smal
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
-        { height: small ? 44 : 56, borderRadius: R.btn, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 18, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
+        { height: small ? 44 : 56, borderRadius: R.btn, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: small ? 14 : 18, opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
         kind === 'line' && { borderWidth: 1, borderColor: C.line },
         style,
       ]}
     >
-      <Text style={{ fontFamily: F.b, fontSize: small ? 14 : 16, color: fg }}>{label}</Text>
+      <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: F.b, fontSize: fitSize(label, small ? 14 : 16, small ? 16 : 22), color: fg }}>{label}</Text>
       {icon ? <Feather name={icon} size={18} color={kind === 'dark' ? C.lime : C.ink} /> : null}
     </Pressable>
   );
@@ -50,7 +54,7 @@ export function Btn({ label, onPress, icon, kind = 'dark', style, disabled, smal
 export function Chip({ label, on, onPress, style, dark }: { label: string; on?: boolean; onPress?: () => void; style?: ViewStyle; dark?: boolean }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!on }} style={[{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill, backgroundColor: on ? C.ink : dark ? C.bg : C.white, borderWidth: on ? 0 : 1, borderColor: C.line }, style]}>
-      <Text style={{ fontFamily: on ? F.b : F.m, fontSize: 13, color: on ? C.white : C.ink }}>{label}</Text>
+      <Text numberOfLines={1} style={{ fontFamily: on ? F.b : F.m, fontSize: fitSize(label, 13, 18), color: on ? C.white : C.ink }}>{label}</Text>
     </Pressable>
   );
 }

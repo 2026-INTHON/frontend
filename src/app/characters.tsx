@@ -8,16 +8,19 @@ import { C } from '../lib/theme';
 import { CHARACTERS, IMG, PERSONAS, CharId } from '../lib/data';
 import { useStore } from '../lib/store';
 import { useT } from '../lib/i18n';
+import { CharacterTraitsSheet } from '../components/character-traits';
 
 // 10 캐릭터 목록 · 카드를 누르면 그 캐릭터로 바뀌고, 꾸미기는 버튼으로
 export default function Characters() {
   const st = useStore();
   const [pw, setPw] = useState(false);
   const [pick, setPick] = useState<CharId | null>(null);
+  const [info, setInfo] = useState<CharId | null>(null); // ⋯ 자세한 특성
   const t = useT();
   // 고르면 바로 저장 (뒤로 가도 그대로). 성격은 지금 성격을 유지하고, 없으면 차분
   const choose = (id: CharId) => st.set({ char: id, persona: PERSONAS[id].some((p) => p.id === st.persona) ? st.persona : 'calm' });
-  const personaName = (id: CharId) => (PERSONAS[id].find((p) => p.id === (st.char === id ? st.persona : 'calm')) ?? PERSONAS[id][0]).name;
+  const personaOf = (id: CharId) => (PERSONAS[id].find((p) => p.id === (st.char === id ? st.persona : 'calm')) ?? PERSONAS[id][0]);
+  const personaName = (id: CharId) => personaOf(id).name;
   const progressOf = (id: CharId) => (st.lastPlayed?.char === id ? (st.lastPlayed.status === 'done' ? t('{title} 완료', { title: st.lastPlayed.title || t('장면') }) : t('{title} 하는 중', { title: st.lastPlayed.title || t('장면') })) : null);
   return (
     <Screen>
@@ -33,19 +36,24 @@ export default function Characters() {
                 <Image source={IMG.char[c.id]} style={{ width: 150, height: 290, marginLeft: -27, marginTop: 6, opacity: open ? 1 : 0.4 }} resizeMode="contain" />
                 {!open ? <Feather name="lock" size={22} color={C.ink} style={{ position: 'absolute', top: 44, left: 37 }} /> : null}
               </View>
+              {open ? (
+                <Pressable onPress={() => setInfo(c.id)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('{name} 자세한 특성', { name: t(c.name) })} style={({ pressed }) => ({ position: 'absolute', top: 6, right: 6, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? C.bg : 'transparent', zIndex: 2 })}>
+                  <Feather name="more-horizontal" size={22} color={C.ink} />
+                </Pressable>
+              ) : null}
               <View style={{ flex: 1, gap: 6, justifyContent: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', paddingRight: open ? 36 : 0 }}>
                   <T s="h3" style={{ color: open ? C.ink : C.sub }}>{t(c.name)}</T>
                   <T s="small">{t(c.role)}</T>
                 </View>
                 {open ? (
                   <>
-                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                       {st.char === c.id ? <Tag label={t('대화 중')} tone="lime" /> : null}
                       <Tag label={`${t('성격')} · ${t(personaName(c.id))}`} />
                     </View>
                     {progressOf(c.id) ? <T s="small">{progressOf(c.id)}</T> : null}
-                    <View style={{ flexDirection: 'row', gap: 6, alignSelf: 'flex-end' }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6 }}>
                       <Chip label={t('꾸미기')} on onPress={() => { choose(c.id); router.push({ pathname: '/dress', params: { c: c.id } }); }} />
                       <Chip label={t('성격 바꾸기')} onPress={() => { choose(c.id); setPick(c.id); }} />
                     </View>
@@ -66,6 +74,7 @@ export default function Characters() {
         </Pressable>
       </ScrollView>
       <Paywall visible={pw} onClose={() => setPw(false)} />
+      <CharacterTraitsSheet char={info} persona={info ? personaOf(info).id : 'calm'} lang={st.lang} onClose={() => setInfo(null)} />
       <Sheet visible={!!pick} onClose={() => setPick(null)}>
         <T s="h2" style={{ marginBottom: 12 }}>{t('성격 바꾸기')}</T>
         {pick
