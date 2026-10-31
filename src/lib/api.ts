@@ -110,7 +110,12 @@ export type SubmitTurnResult = { turn: ApiTurn; session: PlaySession; result: Se
 export type ApiScene = { id: string; title: string; situation: string; goal: string; pack: 'ko' | 'en'; characterId: string; personalityId: string; nodeCount: number; source?: string };
 export type HintRes = { step?: 1 | 2; clue?: RawCue[] | null; hiddenThought?: string | null; tip?: string | null };
 
-export type ApiCharacter = { id: string; clientKey?: string; name: string; role?: string; free?: boolean; locked?: boolean; imageUrl?: string | null; cardUrl?: string | null; personalities?: { id: string; clientKey?: string; name: string; short?: string; long?: string; level?: string }[] };
+export type CharacterProfile = {
+  age: string; role: string; occupation: string; introduction: string; relationship: string;
+  values: string[]; traits: string[]; likes: string[]; dislikes: string[]; hobbies: string[];
+  speakingStyle: string; sampleLines: string[];
+};
+export type ApiCharacter = { id: string; clientKey?: string; name: string; role?: string; free?: boolean; locked?: boolean; imageUrl?: string | null; cardUrl?: string | null; personalities?: { id: string; clientKey?: string; name: string; short?: string; long?: string; description?: string; level?: string; profile?: CharacterProfile; profileRevision?: string }[] };
 export type ApiSub = { id: string; title: string; sceneId?: string | null; state?: 'done' | 'now' | 'open' | 'locked'; score?: number | null; grade?: string | null; availability?: 'ready' | 'unavailable' | 'generating' | string };
 export type ApiChapter = { id: string; no?: number; title: string; description?: string; desc?: string; source?: 'curriculum' | 'examples' | 'personal'; locked?: boolean; generationStatus?: 'ready' | 'generating' | 'failed' | null; characterId?: string; subs: ApiSub[] };
 
