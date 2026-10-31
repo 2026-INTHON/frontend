@@ -35,7 +35,8 @@ export function CharacterActor({uri, fallback, emotion='neutral', eventKey, top,
     let alive=true;
     const loaded=uri?Image.prefetch(uri):Promise.resolve(false);
     const show=(image:string|null)=>{if(alive){setShown({uri:image,key:eventKey});setVisible(!!eventKey);}};
-    loaded.then(ok=>show(ok?uri:null)).catch(()=>show(null));
+    // RN resolves true; react-native-web resolves void on a successful prefetch.
+    loaded.then(ok=>show(ok===false?null:uri)).catch(()=>show(null));
     return()=>{alive=false;};
   },[uri,eventKey]);
   useEffect(()=>{
