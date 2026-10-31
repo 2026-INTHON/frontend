@@ -165,3 +165,9 @@ FE는 감정이나 키 문자열로 URL을 조립하지 않고 `ending.render.im
 - 원본은 BE `src/personas/{girlfriend,professor,friend,manager}.json`. 카드 정보와 실시간 AI 답변·신규 챕터 생성이 같은 원본을 사용한다. 상세 편집법은 해당 디렉터리 README 참고.
 - 프로필 내용은 수정 가능한 가상 인물 초안이다. 좋아하는 것이 다르다는 이유로 X 판정을 하지 않는다. 기존 DB 고정 대본은 이 배포로 재작성하지 않는다.
 
+## 성격 선택 포토카드
+
+- `GET /api/v1/assets/characters`의 기존 이미지 사용. `tease`(발랄/활발/친절)는 미소, `picky`는 가벼운 찡그림, `calm`은 기존 번들 사진 유지.
+- 서윤: `delighted` / `displeased`. 교수: `pleased` / `stern`. 친구·부장은 기존 `happy` / `angry` 에셋의 가벼운 표정 사용.
+- `endingPreferred` 이미지는 제외. 목록이나 이미지 로드 실패 시 원래 사진으로 유지하며 성격 선택을 막지 않는다. 추가 생성 비용은 없다.
+

@@ -51,6 +51,8 @@ Runtime R in `src/lib/theme.ts` owns card 20, button 28 and pill 999 radii. This
 Scene playback owns its session player; `src/lib/voice.ts` owns demo-ending and expression-practice playback. Both use the same server voice contract. A stale response must not start an old line. Existing notice text and ending error/replay state own recoverable audio errors.
 
 ## Patterns
+Personality photo cards reuse existing character assets: cheerful uses a smile, picky uses a mild frown, calm retains the bundled portrait. `personaPhoto` selects known reactions from the public asset catalog and excludes ending art. Card geometry and selection remain stable while images load; offline or broken images retain the bundled portrait. No image generation occurs on selection.
+
 The home character artwork has a 44px circular profile disclosure at its upper right. `CharacterProfileOverlay` owns this non-modal inline layer: white 94% opacity, scrollable content, close toggle and Escape on web. The covered artwork cannot start a scene or take keyboard focus; footer and navigation stay available. `C.profileSurface` owns the surface color. Profile content comes from the selected server personality, with explicit loading, unavailable, error and retry states. Switching character/personality closes the disclosure and never shows the previous profile.
 
 Demo mode controls the learning script and local evaluation; it does not select a device narrator. All character speech uses authenticated, cached server MP3s. Failure preserves text and offers replay. No silent fallback to device TTS. Author-defined demo reaction emotions are independent of learner score. Runtime checks: lint, typecheck, test:voice and web export; browser verification includes the existing demo scene and replay.

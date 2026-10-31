@@ -115,6 +115,10 @@ export type CharacterProfile = {
   values: string[]; traits: string[]; likes: string[]; dislikes: string[]; hobbies: string[];
   speakingStyle: string; sampleLines: string[];
 };
+export type CharacterImage = {
+  assetKey: string; characterId: string; emotion: Emotion; imageUrl: string;
+  reaction?: string | null; endingPreferred?: boolean;
+};
 export type ApiCharacter = { id: string; clientKey?: string; name: string; role?: string; free?: boolean; locked?: boolean; imageUrl?: string | null; cardUrl?: string | null; personalities?: { id: string; clientKey?: string; name: string; short?: string; long?: string; description?: string; level?: string; profile?: CharacterProfile; profileRevision?: string }[] };
 export type ApiSub = { id: string; title: string; sceneId?: string | null; state?: 'done' | 'now' | 'open' | 'locked'; score?: number | null; grade?: string | null; availability?: 'ready' | 'unavailable' | 'generating' | string };
 export type ApiChapter = { id: string; no?: number; title: string; description?: string; desc?: string; source?: 'curriculum' | 'examples' | 'personal'; locked?: boolean; generationStatus?: 'ready' | 'generating' | 'failed' | null; characterId?: string; subs: ApiSub[] };
@@ -254,6 +258,7 @@ export const api = {
   health: () => call<{ status?: string }>('/health', {}, false, 5000),
   scenes: (q: { pack?: string; characterId?: string; personalityId?: string }) => call<ApiScene[]>('/scenes?' + qs(q), {}, false),
   characters: () => call<ApiCharacter[]>('/characters', {}, false, 10000),
+  characterImages: () => call<{ items: CharacterImage[] }>('/assets/characters', {}, false, 10000),
   chapters: (q: { pack: string; characterId: string }) => call<ApiChapter[]>('/chapters?' + qs(q), {}, true, 15000),
   // aiMode 를 빼면 옛 예시는 mock 채점이라 꼭 live 로 보내요
   start: startSession,
