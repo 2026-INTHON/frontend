@@ -606,7 +606,7 @@ export default function SceneScreen() {
             ) : null}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
               {out.mark === '△' && !out.native && (out.advance || E?.canSkip) ? <Btn label="다음 대화" kind="line" style={{ flex: 1 }} onPress={cont} /> : null}
-              <Btn label={out.native ? '한국어로 다시 말하기' : out.mark === 'X' ? '정정하기' : out.mark === '?' ? '다시 말하기' : '보완해서 다시'} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={retry} />
+              <Btn label={out.native ? '한국어로 다시 말하기' : '다시 말하기'} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={retry} />
             </View>
             {out.mark === 'X' && out.tries >= 3 && E?.canSkip ? (
               <Pressable onPress={cont} style={{ alignSelf: 'center', padding: 6 }}>
