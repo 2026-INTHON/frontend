@@ -1,5 +1,7 @@
 import { api, absUrl, ApiError, ApiEnding, Briefing, HintRes, PlaySession, RawCue, Render, SubmitTurnResult } from './api';
 import { judge } from './judge';
+import { subtitleText } from './learning-copy';
+import { demoBrief } from './demo-briefings';
 import { CharId, Cue, Line, PersonaId, Place, PLACE_OF, SERVER_CHAR, SERVER_PERSONA, Scene, charFromServer, lineFor, personaFromServer, sceneById, sceneForChar } from './data';
 
 // 장면 진행 엔진.
@@ -64,7 +66,7 @@ export type Ending = {
   recap?: { title: string; story: string; comment: string; prompt: string; tr: { title: string; story: string; comment: string; prompt: string } | null } | null;
 };
 
-export function normEnding(x: ApiEnding, fallbackImage: string | null = null): Ending {
+export function normEnding(x: ApiEnding, fallbackImage: string | null = null, language?: string): Ending {
   const d = x.dialogue;
   const r = x.recap;
   return {
@@ -74,8 +76,8 @@ export function normEnding(x: ApiEnding, fallbackImage: string | null = null): E
     title: x.title,
     text: x.text,
     image: img(x.render) ?? fallbackImage,
-    dialogue: d ? { turnId: d.turnId, text: d.text, sub: d.subtitle?.text ?? null, audio: d.audioUrl ? absUrl(d.audioUrl) : null } : null,
-    recap: r ? { title: r.title, story: r.story, comment: r.comment, prompt: r.prompt, tr: r.translation ? { title: r.translation.title, story: r.translation.story, comment: r.translation.comment, prompt: r.translation.prompt } : null } : null,
+    dialogue: d ? { turnId: d.turnId, text: d.text, sub: language ? subtitleText(d.subtitle, language) : d.subtitle?.text ?? null, audio: d.audioUrl ? absUrl(d.audioUrl) : null } : null,
+    recap: r ? { title: r.title, story: r.story, comment: r.comment, prompt: r.prompt, tr: r.translation && (!language || r.translation.language === language) ? { title: r.translation.title, story: r.translation.story, comment: r.translation.comment, prompt: r.translation.prompt } : null } : null,
   };
 }
 export type Hint = { clue: { k: string; v: string }[]; thought: string | null; tip: string | null };
@@ -99,6 +101,7 @@ export interface Engine {
   hint(step: 1 | 2): Promise<Hint>;
   submit(text: string, voice?: { transcriptId?: string; realtime?: boolean }): Promise<Out>;
   next(): void; // 다음 대사로
+  correct(): Promise<void>; // 사용자가 명시적으로 요청한 직전 답 다시 말하기
   skip(): boolean; // 데모 모드에서만: △ 그대로 진행 / 정답 보고 넘어가기 (true 면 장면 끝)
   canSkip: boolean;
   transcribe(uri: string | null): Promise<{ text: string; transcriptId?: string }>;
@@ -143,12 +146,15 @@ const scoreOf = (t: Track) => {
   return { reach, infer, self, score: reach * 0.5 + infer * 0.25 + self * 0.25 - t.mistakes * 5 };
 };
 
-export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko' | 'en' = 'ko'): Engine {
+export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko' | 'en' = 'ko', language = 'en'): Engine {
   let i = 0;
   let wrong = 0;
   let first: string | undefined;
   const st = newTrack(scene.turns.length);
   let lastReply = '';
+  let previousIndex = 0;
+  let lastWasCorrect = false;
+  let correctionApplied = false;
   let lastEmotion: import('./api').Emotion = 'neutral';
   const polite = scene.char === 'boss' || scene.char === 'prof';
   // 데모 음성 인식: 첫 시도는 일부러 말실수 문장, 그다음은 좋은 문장
@@ -160,9 +166,9 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
     persona,
     place: scene.place,
     bg: null,
-    title: scene.title,
+    title: demoBrief(scene.id, language)?.title ?? scene.title,
     no: scene.no,
-    brief: { partner: '', situation: scene.situation, goal: scene.goal },
+    brief: demoBrief(scene.id, language) ?? { partner: '', situation: scene.situation, goal: scene.goal },
     line: lineFor(scene.turns[0], persona),
     render: null,
     lives: 3,
@@ -178,6 +184,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
     async submit(text, voice) {
       const turn = scene.turns[i];
       const v = judge(turn, text, pack);
+      previousIndex = i; lastWasCorrect = v.ok; correctionApplied = false;
       if (first === undefined) first = text;
       const prevFirst = first;
       const retried = wrong > 0;
@@ -236,6 +243,12 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
       e.next();
       return false;
     },
+    async correct() {
+      if (!correctionApplied && lastWasCorrect) st.pass = Math.max(0, st.pass - 1);
+      correctionApplied = true;
+      i = previousIndex;
+      e.line = lineFor(scene.turns[i], persona);
+    },
     async transcribe() {
       await new Promise((r) => setTimeout(r, 1400));
       return { text: sample() };
@@ -278,12 +291,12 @@ const wrapErr = (err: unknown): SceneError => {
 };
 
 // 홈 '오늘의 장면': 내 캐릭터의 진행 중/열린 장면을 서버 챕터에서 찾아요
-export async function resolveTodayScene(char: CharId, persona: PersonaId, pack: 'ko' | 'en'): Promise<{ sceneId: string; title: string } | null> {
-  const chapters = await api.chapters({ pack, characterId: SERVER_CHAR[char] });
+export async function resolveTodayScene(char: CharId, persona: PersonaId, pack: 'ko' | 'en', language?: string): Promise<{ sceneId: string; title: string } | null> {
+  const chapters = await api.chapters({ pack, characterId: SERVER_CHAR[char], language });
   const subs = chapters.filter((c) => !c.locked && c.generationStatus !== 'generating').flatMap((c) => c.subs ?? []);
   const ok = (s: (typeof subs)[number]) => !!s.sceneId && (s.availability ?? 'ready') === 'ready' && s.state !== 'locked';
   const pick = subs.find((s) => ok(s) && s.state === 'now') ?? subs.find((s) => ok(s) && s.state === 'open') ?? subs.find(ok);
-  if (pick?.sceneId) return { sceneId: pick.sceneId, title: pick.title };
+  if (pick?.sceneId) return { sceneId: pick.sceneId, title: pick.translation?.language === language ? pick.translation!.title : pick.title };
   // 챕터가 비어 있으면 공개 장면 목록에서 같은 캐릭터·성격
   // 짧은 예시보다 8회 교육과정(gf-1-1, prof-1-1 등)을 먼저
   const list = await api.scenes({ pack, characterId: SERVER_CHAR[char] });
@@ -303,7 +316,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
     // 데모에서 저장된 이어하기 링크도 선택한 성격의 서버 예시로 연결해요.
     if (sceneById(id)) id = `${id}-${SERVER_PERSONA[o.persona]}`;
     // 다시 도전: 서버 retry 로 새 세션 (기존 결과는 그대로)
-    ses = o.retryOf ? await api.retry(o.retryOf) : await api.start(id, { personalityId: SERVER_PERSONA[o.persona], subtitleLanguage: o.lang });
+    ses = o.retryOf ? await api.retry(o.retryOf, o.lang) : await api.start(id, { personalityId: SERVER_PERSONA[o.persona], subtitleLanguage: o.lang });
   } catch (err) {
     throw wrapErr(err);
   }
@@ -314,7 +327,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
   let clientTurn: { id: string; text: string } | null = null;
   const t = { mistakes: 0, best: '', worst: '', fixed: [] as { said: string; better: string }[] };
   const char = charFromServer(ses.characterId, o.char);
-  const lineOf = (s: PlaySession): Line => ({ line: s.npc.text, action: s.npc.action ?? undefined, cues: normCues(s.npc.cues) as Cue[], sub: s.npc.subtitle?.text ?? null, audio: s.npc.audioUrl ? absUrl(s.npc.audioUrl) : null });
+  const lineOf = (s: PlaySession): Line => ({ line: s.npc.text, action: s.npc.action ?? undefined, cues: normCues(s.npc.cues) as Cue[], sub: subtitleText(s.npc.subtitle, o.lang), audio: s.npc.audioUrl ? absUrl(s.npc.audioUrl) : null });
 
   const e: Engine = {
     mode: 'live',
@@ -323,7 +336,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
     persona: personaFromServer(ses.personalityId, o.persona),
     place: PLACE_OF[char],
     bg: ses.backgroundUrl ? absUrl(ses.backgroundUrl) : null,
-    title: ses.briefing?.title ?? '',
+    title: ses.briefing?.translation?.language === o.lang ? ses.briefing.translation.title || ses.briefing.title || '' : ses.briefing?.title ?? '',
     no: '',
     brief: { partner: ses.briefing?.partner ?? '', situation: ses.briefing?.situation ?? '', goal: ses.briefing?.goal ?? '', translation: ses.briefing?.translation ?? null },
     line: lineOf(ses),
@@ -379,7 +392,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         native,
         voice: !!voice,
         reply: r.turn.npcReply,
-        replyLine: { line: r.turn.npcReply, sub: r.turn.npcReplySubtitle?.text ?? null, audio: r.turn.audioUrl ? absUrl(r.turn.audioUrl) : null, turnId: r.turn.id },
+        replyLine: { line: r.turn.npcReply, action: r.turn.action, cues: normCues(r.turn.cues) as Cue[], sub: subtitleText(r.turn.npcReplySubtitle, o.lang), audio: r.turn.audioUrl ? absUrl(r.turn.audioUrl) : null, turnId: r.turn.id },
         render: img(r.turn.render),
         lifeDelta: r.turn.lifeDelta ?? 0,
         tone: f.tone?.label ?? null,
@@ -390,7 +403,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         tip: f.message ?? '',
         better: f.betterExpression ?? '',
         why: ev?.reason ?? f.reason ?? '',
-        whySub: ev?.reasonSubtitle?.text ?? null,
+        whySub: subtitleText(ev?.reasonSubtitle, o.lang),
         first: ok && retried ? prevFirst : undefined,
         tries: ok ? 0 : wrong,
         views: (f.views ?? []).map((v) => ({ who: v.who, meaning: v.meaning, cue: v.cue ?? '' })),
@@ -400,20 +413,26 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       };
     },
     next() {
-      // 피드백을 닫은 다음 서버가 넘겨준 다음 대사를 보여 줘요
-      wrong = 0;
-      first = undefined;
+      // Apply the server's actual next line, including clarifications on the same checkpoint.
       // 최종 결과가 나왔으면 다음 대사를 시작하지 않아요
       if (last?.result || pending?.status === 'succeeded' || pending?.status === 'failed') {
         pending = null;
         return;
       }
       if (pending) {
+        if (pending.nodeIndex !== ses.nodeIndex) { wrong = 0; first = undefined; }
         ses = pending;
         e.line = lineOf(ses);
         e.render = img(ses.npc.render) ?? e.render;
       }
       pending = null;
+    },
+    async correct() {
+      if (!last) return;
+      ses = await api.correct(ses.id, last.turn.id);
+      pending = null; clientTurn = null;
+      e.line = lineOf(ses); e.render = img(ses.npc.render); e.lives = ses.lives;
+      first = last.turn.text;
     },
     skip() {
       return false; // 서버 모드엔 건너뛰기가 없어요. 힌트 보고 다시 말해요.
@@ -437,7 +456,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       const r = last?.result ?? (await api.result(ses.id));
       // 표정: ending.render → 마지막 turn.render → session.npc.render. 음성: 같은 턴이면 이미 받은 것 재사용
       const endingOf = (x: ApiEnding) => {
-        const en = normEnding(x, img(last?.turn.render) ?? img(ses.npc.render));
+        const en = normEnding(x, img(last?.turn.render) ?? img(ses.npc.render), o.lang);
         if (en.dialogue && !en.dialogue.audio && last?.turn.audioUrl && (!en.dialogue.turnId || en.dialogue.turnId === last.turn.id)) en.dialogue.audio = absUrl(last.turn.audioUrl);
         return en;
       };
@@ -471,7 +490,7 @@ export async function createEngine(sceneId: string, o: { demo: boolean; pack: 'k
   if (o.demo) {
     const local = sceneId === 'today' ? sceneForChar(o.char) : sceneById(sceneId);
     if (!local) throw new SceneError('not_found', '예시 대화에 없는 장면이에요.');
-    return mockEngine(local, o.persona, o.pack);
+    return mockEngine(local, o.persona, o.pack, o.lang);
   }
   return liveEngine(sceneId, o);
 }

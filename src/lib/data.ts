@@ -223,13 +223,10 @@ export const personaFromServer = (id?: string | null, fb: PersonaId = 'calm'): P
 export const PLACE_OF: Record<CharId, Place> = { boss: 'office', seoyun: 'cafe', prof: 'street', junho: 'street' };
 
 export const LANGS = [
-  { id: 'en', name: 'English', ko: '영어' },
-  { id: 'ja', name: '日本語', ko: '일본어' },
-  { id: 'zh', name: '中文 (简体)', ko: '중국어' },
-  { id: 'vi', name: 'Tiếng Việt', ko: '베트남어' },
-  { id: 'es', name: 'Español', ko: '스페인어' },
-  { id: 'id', name: 'Bahasa Indonesia', ko: '인도네시아어' },
-  { id: 'ko', name: '한국어', ko: '한국어' },
+  { id: 'ko', name: '한국어', ko: '한국어', flag: '🇰🇷' },
+  { id: 'ja', name: '日本語', ko: '일본어', flag: '🇯🇵' },
+  { id: 'en', name: 'English', ko: '영어', flag: '🇺🇸' },
+  { id: 'zh', name: '中文', ko: '중국어', flag: '🇨🇳' },
 ];
 
 export type Sub = { id: string; title: string; state: 'done' | 'now' | 'open' | 'locked'; grade?: string; scene?: string };

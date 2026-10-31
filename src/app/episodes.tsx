@@ -9,6 +9,7 @@ import { CHAPTERS, CHARACTERS, CharId, IMG, PERSONAS, SERVER_CHAR, charById } fr
 import { api } from '../lib/api';
 import { useStore } from '../lib/store';
 import { useGenerationJobs } from '../lib/generations';
+import { learningCopy } from '../lib/learning-copy';
 
 // 화면에 그릴 챕터 모양 (서버 /chapters 또는 데모 대본)
 type Sub = { id: string; title: string; sceneId: string | null; state: 'done' | 'now' | 'open' | 'locked'; grade?: string | null; ready: boolean };
@@ -31,6 +32,7 @@ function fromDemo(): Chapter[] {
 // 11 에피소드: 캐릭터별 챕터 → 서브 챕터. 서버 챕터를 그대로 보여 줘요.
 export default function Episodes() {
   const st = useStore();
+  const copy = learningCopy(st.lang);
   const [char, setChar] = useState<CharId>(st.char);
   const [pw, setPw] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -40,32 +42,32 @@ export default function Episodes() {
   // 생성 작업: ready 가 되면 챕터 목록을 다시 불러와요
   const gen = useGenerationJobs(!st.demo, () => setTick((t) => t + 1));
   const myJobs = gen.jobs.filter((j) => j.characterId === SERVER_CHAR[char] && j.status !== 'ready');
-  const key = `${char}-${st.pack}-${tick}`;
+  const key = `${char}-${st.pack}-${st.lang}-${tick}`;
   const [res, setRes] = useState<{ key: string; list?: Chapter[]; err?: string } | null>(null);
   useEffect(() => {
     if (st.demo) return;
     let alive = true;
     api
-      .chapters({ pack: st.pack, characterId: SERVER_CHAR[char] })
+      .chapters({ pack: st.pack, characterId: SERVER_CHAR[char], language: st.lang })
       .then((rows) => {
         const l: Chapter[] = rows.map((c, i) => ({
           id: c.id,
           no: c.no ?? i + 1,
-          title: c.title,
-          desc: c.description ?? c.desc ?? '',
+          title: c.translation?.language === st.lang ? c.translation.title : c.title,
+          desc: c.translation?.language === st.lang ? c.translation.desc : c.description ?? c.desc ?? '',
           locked: !!c.locked,
           generating: c.generationStatus === 'generating',
           failed: c.generationStatus === 'failed',
           personal: c.source === 'personal',
-          subs: (c.subs ?? []).map((s) => ({ id: s.id, title: s.title, sceneId: s.sceneId ?? null, state: s.state ?? 'open', grade: s.grade ?? (s.score != null ? String(s.score) : null), ready: !!s.sceneId && (s.availability ?? 'ready') === 'ready' })),
+          subs: (c.subs ?? []).map((s) => ({ id: s.id, title: s.translation?.language === st.lang ? s.translation.title : s.title, sceneId: s.sceneId ?? null, state: s.state ?? 'open', grade: s.grade ?? (s.score != null ? String(s.score) : null), ready: !!s.sceneId && (s.availability ?? 'ready') === 'ready' })),
         }));
         if (alive) setRes({ key, list: l });
       })
-      .catch(() => alive && setRes({ key, err: '챕터를 불러오지 못했어요.' }));
+      .catch(() => alive && setRes({ key, err: learningCopy(st.lang).loadError }));
     return () => {
       alive = false;
     };
-  }, [char, st.demo, st.pack, key]);
+  }, [char, st.demo, st.pack, st.lang, key]);
   // 데모 대본은 서윤 챕터만 있어요
   const cur = res?.key === key ? res : null;
   const list: Chapter[] | null = st.demo ? (char === 'seoyun' ? fromDemo() : []) : (cur?.list ?? null);
@@ -77,7 +79,7 @@ export default function Episodes() {
   const c = charById(char);
   return (
     <Screen>
-      <TopBar title={`${c.name} · 챕터`} />
+      <TopBar title={`${c.name} · ${copy.chapters}`} />
       {/* 캐릭터 바꿔 보기 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 24, paddingVertical: 8 }}>
         {CHARACTERS.map((x) => (
@@ -111,12 +113,12 @@ export default function Episodes() {
         {err ? (
           <View style={{ backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 10 }}>
             <T s="label">{err}</T>
-            <Btn label="다시 시도" small icon="rotate-cw" onPress={load} />
+            <Btn label={copy.retry} small icon="rotate-cw" onPress={load} />
           </View>
         ) : !list ? (
           <View style={{ padding: 24, alignItems: 'center', gap: 8 }}>
             <ActivityIndicator color={C.ink} />
-            <T s="small">챕터 불러오는 중…</T>
+            <T s="small">{copy.loading}</T>
           </View>
         ) : !list.length ? (
           <View style={{ backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 6 }}>
