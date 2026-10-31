@@ -50,11 +50,14 @@ export default function Home() {
       {/* 오늘의 장면 / 이어하기 */}
       <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={`${next.tag}: ${next.title}`} style={{ flex: 1, marginHorizontal: 24, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
         <Image source={IMG.bg[PLACE_OF[charId]]} style={{ position: 'absolute', width: '100%', height: '100%' }} resizeMode="cover" />
-        <Image source={IMG.char[charId]} style={{ position: 'absolute', top: 18, left: '38%', width: '50%', height: '100%' }} resizeMode="contain" />
-        <View style={{ position: 'absolute', top: 14, left: 14 }}>
-          <Tag label={next.tag} tone="lime" />
+        {/* 캐릭터는 아래 정보 칸 위쪽 공간에 전신이 다 보이게 (신발까지) */}
+        <View style={{ flex: 1 }}>
+          <Image source={IMG.char[charId]} style={{ flex: 1, width: '56%', height: undefined, marginLeft: '34%', marginTop: 18, marginBottom: 6 }} resizeMode="contain" />
+          <View style={{ position: 'absolute', top: 14, left: 14 }}>
+            <Tag label={next.tag} tone="lime" />
+          </View>
         </View>
-        <View style={{ position: 'absolute', left: 12, right: 12, bottom: 12, backgroundColor: C.white, borderRadius: 18, padding: 14 }}>
+        <View style={{ marginHorizontal: 12, marginBottom: 12, backgroundColor: C.white, borderRadius: 18, padding: 14 }}>
           <T s="small">{c.name} · {p.name}</T>
           <T s="h3">{next.title}</T>
           <T s="sub">{next.sub}</T>
