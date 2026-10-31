@@ -21,5 +21,8 @@ test('Live dialogue carries the actual reply, image and agreed register through 
   assert.equal(response.replyLine.line,text);assert.equal(response.replyLine.speechLevel,level);
   engine.next();assert.equal(engine.line.line,text);assert.equal(engine.line.speechLevel,level);assert.equal(engine.render,'https://img.test/happy.webp');
  }
+ context.api.turn=async()=>({session:{...current,repair:null},turn:{text:'무례하게 말해서 미안해',repairAction:'resolved',npcReply:'사과는 받아들일게. 아까 이야기로 돌아가 볼까?',evaluation:{mark:'O',progression:'retry',goalAchieved:false},feedback:{}}});
+ const apology=await engine.submit('무례하게 말해서 미안해');
+ assert.equal(apology.mark,'O');assert.equal(apology.ok,true);assert.equal(apology.advance,false);assert.equal(apology.done,false);
  await engine.correct();assert.equal(engine.line.line,opening.npc.text);assert.equal(engine.line.speechLevel,'polite');
 });

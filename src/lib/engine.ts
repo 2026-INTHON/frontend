@@ -407,7 +407,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         first: ok && retried ? prevFirst : undefined,
         tries: ok ? 0 : wrong,
         views: (f.views ?? []).map((v) => ({ who: v.who, meaning: v.meaning, cue: v.cue ?? '' })),
-        advance: ok || (mark === '△' && ev?.progression === 'advance'),
+        advance: ev?.progression ? ev.progression === 'advance' : ok,
         done: !!r.result || r.session.status === 'succeeded',
         failed: r.session.status === 'failed' || r.session.lives <= 0,
       };
