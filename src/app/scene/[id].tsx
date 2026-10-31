@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, ImageBackground, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ImageBackground, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as haptic from '../../lib/haptics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -14,7 +14,8 @@ import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
 import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
 import { useStore } from '../../lib/store';
-import { learningCopy } from '../../lib/learning-copy';
+import { learningCopy, reactionCopy } from '../../lib/learning-copy';
+import { CharacterActor } from '../../components/character-actor';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized' | 'reaction';
 type Log = { who: 'char' | 'me'; text: string; mark?: Mark };
@@ -402,9 +403,8 @@ export default function SceneScreen() {
   return (
     <ImageBackground source={E?.bg ? { uri: E.bg } : IMG.bg[place]} style={{ flex: 1, width: '100%', backgroundColor: C.bg }} imageStyle={{ width: '100%', height: '100%' }} resizeMode="cover">
       <View style={{ ...absFill, backgroundColor: TONE[place] }} />
-      {/* 캐릭터: 서버가 고른 표정 이미지가 있으면 그걸로 */}
-      {/* 서버 표정 이미지는 흰 배경이 있어서, 배경 없는 앱 안 캐릭터 PNG를 써요 */}
-      <Image source={IMG.char[charId]} style={{ position: 'absolute', top: ins.top + 64, alignSelf: 'center', width: '62%', height: '72%' }} resizeMode="contain" accessibilityLabel={`${ch.name} 캐릭터`} />
+      <CharacterActor uri={out?.render??E?.render??null} fallback={IMG.char[charId]} emotion={line.emotion} eventKey={out?(out.replyLine.turnId??String(log.length)):''}
+        top={ins.top+64} name={ch.name} lang={st.lang} sound={st.soundEffects} active={ready&&phase!=='brief'&&!pause&&!listening&&!busy} />
       {/* 아래로 갈수록 점점 흐려지는 그라데이션 (경계선 없이) */}
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}>
         {FADE.map((a, i) => (
@@ -763,6 +763,7 @@ export default function SceneScreen() {
             <T s="h2">잠깐 멈췄어요</T>
             <T s="sub">지금 나가도 여기까지 저장돼요.{'\n'}다음에 이어서 할 수 있어요.</T>
             <Btn label="계속하기" icon="play" onPress={() => setPause(false)} style={{ marginTop: 8 }} />
+            <Btn label={st.soundEffects?reactionCopy(st.lang).on:reactionCopy(st.lang).off} icon={st.soundEffects?'volume-2':'volume-x'} kind="ghost" onPress={()=>st.set({soundEffects:!st.soundEffects})} />
             <Btn label="설정" kind="ghost" onPress={() => { setPause(false); router.push('/settings'); }} />
             <Btn label="나가기" kind="line" onPress={() => { setPause(false); stopSpeak(); eng.current?.pause(); saveProgress('paused'); router.replace('/home'); }} />
           </View>
