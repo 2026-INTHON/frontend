@@ -330,7 +330,16 @@ export default function SceneScreen() {
       play([o.replyLine]);
       return;
     }
-    if (o.ok || o.advance) {
+    if (e.mode === 'live') {
+      // 서버: 캐릭터 반응(npcReply)이 곧 다음 대사예요. 세션만 맞추고 그 대사에 배지를 달아 보여 줘요 (같은 대사 두 번 X)
+      e.next();
+      setReact(null);
+      setLine({ ...e.line, ...o.replyLine, audio: o.replyLine.audio ?? e.line.audio });
+      setLineMark(o.mark);
+      setHintNudge(!o.ok && o.tries >= 2);
+      play([o.replyLine]);
+      saveProgress();
+    } else if (o.ok || o.advance) {
       // 반응은 작은 말풍선으로 남기고, 다음 대사를 바로 보여 줘요
       e.next();
       const nl = e.line;
@@ -350,6 +359,29 @@ export default function SceneScreen() {
       play([o.replyLine]);
     }
     setPhase((p) => (p === 'typing' ? 'typing' : 'talk'));
+  }
+
+  // 다시 말하기 (선택): 직전 답을 고쳐 말해요. 서버는 POST /correction 으로 그 턴의 대사로 되돌려 줘요.
+  async function correctLast() {
+    const e = eng.current;
+    if (!e || sending.current) return;
+    sending.current = true;
+    setDetail(false);
+    stopPlay();
+    try {
+      await e.correct();
+      setReact(null);
+      setOut(null);
+      setLineMark(null);
+      setLine(e.line);
+      setHintNudge(true);
+      setPhase('talk');
+      saveProgress();
+    } catch {
+      setNotice(t('다시 말하기를 준비하지 못했어요. 잠시 후 다시 눌러 주세요.'));
+    } finally {
+      sending.current = false;
+    }
   }
 
   function saveProgress(status: 'playing' | 'paused' = 'playing') {
@@ -404,12 +436,12 @@ export default function SceneScreen() {
   const showDock = (phase === 'talk' || listening || busy) && !judging && ready && !ended;
   const sec = Math.floor((recMode.current === 'rt' ? rtStat.ms : rec.ms) / 1000);
   // 상황·목표: 서버 번역이 있으면 선택 언어로, 한국어 원문은 아래 작게
-  const trn = lang !== 'ko' ? E?.brief.translation : null;
+  const trn = lang !== 'ko' && (!E?.brief.translation?.language || E.brief.translation.language === lang) ? E?.brief.translation : null;
   const scene = { no: E?.no ?? '', title: trn?.title || E?.title || '', situation: trn?.situation || E?.brief.situation || '', goal: trn?.goal || E?.brief.goal || '', partner: trn?.partner || E?.brief.partner };
   const orig = { situation: trn?.situation ? E?.brief.situation : undefined, goal: trn?.goal ? E?.brief.goal : undefined };
   const openDetail = () => setDetail(true);
-  // 아쉬운 답 뒤 같은 대사에 머물러 있을 때만 '다시 말하기'
-  const onSameLine = !!out && !out.ok && !react && !ended;
+  // 아쉬운 답 뒤에만 '다시 말하기' (선택)
+  const onSameLine = !!out && !out.ok && !ended;
 
   return (
     <ImageBackground source={E?.bg ? { uri: E.bg } : IMG.bg[place]} style={{ flex: 1, width: '100%', backgroundColor: C.bg }} imageStyle={{ width: '100%', height: '100%' }} resizeMode="cover">
@@ -678,7 +710,7 @@ export default function SceneScreen() {
               ) : onSameLine ? (
                 <>
                   <Btn label={t('닫기')} kind="line" style={{ flex: 1 }} onPress={() => setDetail(false)} />
-                  <Btn label={out.native ? t('한국어로 다시 말하기') : t('다시 말하기')} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={() => { setDetail(false); setPhase('talk'); }} />
+                  <Btn label={out.native ? t('한국어로 다시 말하기') : t('다시 말하기')} icon="rotate-ccw" style={{ flex: 1.3 }} onPress={correctLast} />
                 </>
               ) : (
                 <Btn label={t('닫고 이어서 말하기')} icon="mic" style={{ flex: 1 }} onPress={() => setDetail(false)} />

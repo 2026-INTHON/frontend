@@ -10,19 +10,18 @@ export const UI_LANGS: { id: UiLang; name: string }[] = [
   { id: 'en', name: 'English' },
   { id: 'ja', name: '日本語' },
   { id: 'zh', name: '简体中文' },
+  { id: 'ko', name: '한국어' },
 ];
 const COL: Record<Exclude<UiLang, 'ko'>, 0 | 1 | 2> = { en: 0, ja: 1, zh: 2 };
 
-// 저장된 값 정리: 예전 기본값·지원하지 않는 언어는 English. 한국어팩은 한국어 화면을 고를 수 없어요.
-export function normLang(l: string | undefined, pack: 'ko' | 'en' = 'ko'): UiLang {
-  if (l === 'en' || l === 'ja' || l === 'zh') return l;
-  if (l === 'ko' && pack === 'en') return 'ko';
-  return 'en';
+// 저장된 값 정리: 지원하지 않는 언어는 English. 한국어를 고르면 화면도 한국어 원문 그대로예요.
+export function normLang(l: string | undefined): UiLang {
+  return l === 'en' || l === 'ja' || l === 'zh' || l === 'ko' ? l : 'en';
 }
 
 export type Vars = Record<string, string | number | null | undefined>;
 export function tr(lang: string, ko: string, vars?: Vars): string {
-  const L = normLang(lang, 'en');
+  const L = normLang(lang);
   const row = L === 'ko' ? undefined : DICT[ko];
   let s = row ? row[COL[L as Exclude<UiLang, 'ko'>]] : ko;
   if (vars) for (const k in vars) s = s.split(`{${k}}`).join(String(vars[k] ?? ''));
@@ -35,6 +34,6 @@ export function useT() {
   return useCallback((ko: string, vars?: Vars) => tr(lang, ko, vars), [lang]);
 }
 export function useLang(): UiLang {
-  const { lang, pack } = useStore();
-  return normLang(lang, pack);
+  const { lang } = useStore();
+  return normLang(lang);
 }

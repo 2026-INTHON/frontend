@@ -16,7 +16,7 @@ export default function Settings() {
   const st = useStore();
   const acc = useAccount();
   const t = useT();
-  const ui = normLang(st.lang, st.pack);
+  const ui = normLang(st.lang);
   const [speed, setSpeed] = useState('1.0x');
   const [sub, setSub] = useState(true);
   const [auto, setAuto] = useState(false);
@@ -28,8 +28,8 @@ export default function Settings() {
         <T s="small">{t('학습')}</T>
         <Card style={{ gap: 14 }}>
           {/* 표시 언어를 바꿔도 학습 기록·복습 노트는 그대로예요 */}
-          <Row k={t('앱 표시 언어')} right={<Chip label={ui === 'ko' ? '한국어' : (UI_LANGS.find((l) => l.id === ui)?.name ?? 'English')} dark onPress={() => router.push('/onboarding/lang')} />} />
-          <Row k={t('학습 팩')} right={<Chip label={t(st.pack === 'ko' ? '한국어팩' : '영어팩')} dark onPress={() => { const pack = st.pack === 'ko' ? 'en' : 'ko'; st.set({ pack, lang: normLang(st.lang, pack) }); }} />} />
+          <Row k={t('학습 팩')} right={<T s="label">{t('한국어팩')}</T>} />
+          <Row k={t('앱 표시 언어')} right={<Chip label={UI_LANGS.find((l) => l.id === ui)?.name ?? 'English'} dark onPress={() => router.push({ pathname: '/onboarding/lang', params: { returnTo: 'settings' } })} />} />
           <Row k={t('음성 속도')} right={<View style={{ flexDirection: 'row', gap: 4 }}>{['0.8x', '1.0x', '1.2x'].map((x) => <Chip key={x} label={x} on={speed === x} dark onPress={() => setSpeed(x)} />)}</View>} />
           <Row k={t('자막 보기')} right={<Toggle value={sub} onValueChange={setSub} />} />
           <Row k={t('속마음 힌트 자동 표시')} right={<Toggle value={auto} onValueChange={setAuto} />} />

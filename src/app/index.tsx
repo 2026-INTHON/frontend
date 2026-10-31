@@ -1,30 +1,24 @@
 import { View, Image } from 'react-native';
 import { Redirect, router } from 'expo-router';
-import { Btn, Chip, Screen, T } from '../components/ui';
+import { Btn, Screen, T } from '../components/ui';
 import { C } from '../lib/theme';
 import { useStore } from '../lib/store';
 import { Lineup } from '../components/lineup';
 import { Logo } from '../components/logo';
 import { GoogleButton } from '../components/google-button';
 import { useAccount } from '../lib/useAccount';
-import { normLang, UI_LANGS, useT } from '../lib/i18n';
+import { useT } from '../lib/i18n';
 // 01 웰컴
 
 export default function Welcome() {
-  const { set, onboarded, setDemo, lang, pack } = useStore();
+  const { onboarded, languageSelected, setDemo } = useStore();
   const acc = useAccount();
   const t = useT();
   // 이미 시작한 사람은 바로 홈으로 (새로고침해도 처음부터 다시 하지 않아요)
-  if (onboarded) return <Redirect href="/home" />;
+  if (onboarded) return <Redirect href={languageSelected ? '/home' : '/onboarding/lang'} />;
   return (
     <Screen bg={C.white}>
-      {/* 처음부터 내가 읽을 수 있는 언어로 */}
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 6, paddingHorizontal: 24, marginTop: 12 }}>
-        {UI_LANGS.map((l) => (
-          <Chip key={l.id} label={l.name} on={normLang(lang, pack) === l.id} onPress={() => set({ lang: l.id })} />
-        ))}
-      </View>
-      <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
+      <View style={{ paddingHorizontal: 24, marginTop: 56 }}>
         <T s="h2">{t('어서오세요!')}</T>
         <View style={{ marginTop: 10, marginBottom: 6 }}><Logo height={60} /></View>
         <T s="sub">{t('말실수해도 괜찮은 대화 연습장')}</T>
@@ -33,7 +27,7 @@ export default function Welcome() {
         <Lineup />
       </View>
       <View style={{ paddingHorizontal: 16, gap: 8 }}>
-        <Btn label={t('시작하기')} icon="arrow-right" onPress={() => router.push('/onboarding/pack')} />
+        <Btn label={t('시작하기')} icon="arrow-right" onPress={() => router.push('/onboarding/lang')} />
         <GoogleButton
           label={t('Google로 로그인')}
           busy={acc.busy}
@@ -41,12 +35,11 @@ export default function Welcome() {
             const r = await acc.login();
             // 성공하거나 로그인 서버가 꺼져 있으면(데모) 바로 홈으로
             if (r.ok || r.reason === 'disabled') {
-              set({ onboarded: true });
-              router.replace('/home');
+              router.replace('/onboarding/lang');
             }
           }}
         />
-        <Btn label={t('로그인 없이 시작하기')} kind="ghost" small onPress={() => { setDemo(true); router.push('/onboarding/pack'); }} />
+        <Btn label={t('로그인 없이 시작하기')} kind="ghost" small onPress={() => { setDemo(false); router.push('/onboarding/lang'); }} />
         {acc.msg && acc.enabled !== false ? <T s="small" style={{ textAlign: 'center' }}>{t(acc.msg)}</T> : null}
       </View>
     </Screen>

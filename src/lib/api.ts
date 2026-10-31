@@ -70,6 +70,8 @@ export type ApiTurn = {
   comparison?: { firstAnswer: string; currentAnswer: string } | null;
   feedback: TurnFeedback;
   npcReply: string;
+  action?: string;
+  cues?: RawCue[];
   npcReplySubtitle?: { language: string; text: string } | null;
   audioUrl?: string | null;
   emotion?: Emotion;
@@ -115,9 +117,13 @@ export type CharacterProfile = {
   values: string[]; traits: string[]; likes: string[]; dislikes: string[]; hobbies: string[];
   speakingStyle: string; sampleLines: string[];
 };
+export type CharacterImage = {
+  assetKey: string; characterId: string; emotion: Emotion; imageUrl: string;
+  reaction?: string | null; endingPreferred?: boolean;
+};
 export type ApiCharacter = { id: string; clientKey?: string; name: string; role?: string; free?: boolean; locked?: boolean; imageUrl?: string | null; cardUrl?: string | null; personalities?: { id: string; clientKey?: string; name: string; short?: string; long?: string; description?: string; level?: string; profile?: CharacterProfile; profileRevision?: string }[] };
-export type ApiSub = { id: string; title: string; sceneId?: string | null; state?: 'done' | 'now' | 'open' | 'locked'; score?: number | null; grade?: string | null; availability?: 'ready' | 'unavailable' | 'generating' | string };
-export type ApiChapter = { id: string; no?: number; title: string; description?: string; desc?: string; source?: 'curriculum' | 'examples' | 'personal'; locked?: boolean; generationStatus?: 'ready' | 'generating' | 'failed' | null; characterId?: string; subs: ApiSub[] };
+export type ApiSub = { id: string; title: string; translation?: {language: string; title: string}; sceneId?: string | null; state?: 'done' | 'now' | 'open' | 'locked'; score?: number | null; grade?: string | null; availability?: 'ready' | 'unavailable' | 'generating' | string };
+export type ApiChapter = { id: string; no?: number; title: string; translation?: {language: string; title: string; desc: string}; description?: string; desc?: string; source?: 'curriculum' | 'examples' | 'personal'; locked?: boolean; generationStatus?: 'ready' | 'generating' | 'failed' | null; characterId?: string; subs: ApiSub[] };
 
 // 공통 응답 {data, meta} 면 data 만 꺼내요
 const unwrap = (j: any) => (j && typeof j === 'object' && 'data' in j && ('meta' in j || Object.keys(j).length <= 2) ? j.data : j);
@@ -217,7 +223,7 @@ export const authApi = {
 export type ReportDetail = {
   turnId: string; nodeId?: string; attempt?: number; npcText?: string; learnerText?: string; native?: boolean;
   evaluation?: Evaluation | null; originalIntent?: string | null; implicitIntent?: string | null; culturalContext?: string | null;
-  feedback?: string | null; feedbackTranslation?: string | null; praise?: string | null; alternativeExpression?: string | null; practiceTip?: string | null;
+  feedback?: string | null; feedbackTranslation?: {language:string;text:string} | string | null; praise?: string | null; alternativeExpression?: string | null; practiceTip?: string | null;
   comparison?: { firstAnswer: string; currentAnswer: string } | null;
 };
 export type SessionReport = {
@@ -225,7 +231,7 @@ export type SessionReport = {
   status: 'queued' | 'running' | 'ready' | 'failed';
   error: { code: string; message: string; retryable: boolean } | null;
   report: null | {
-    id: string; title?: string; provisional?: boolean;
+    id: string; title?: string; provisional?: boolean; language?: string;
     summary?: { headline?: string; overallFeedback?: string; strengths?: string[]; improvements?: string[]; culturalTakeaways?: string[]; nextPractice?: string | string[] };
     details?: ReportDetail[];
   };
@@ -254,7 +260,8 @@ export const api = {
   health: () => call<{ status?: string }>('/health', {}, false, 5000),
   scenes: (q: { pack?: string; characterId?: string; personalityId?: string }) => call<ApiScene[]>('/scenes?' + qs(q), {}, false),
   characters: () => call<ApiCharacter[]>('/characters', {}, false, 10000),
-  chapters: (q: { pack: string; characterId: string }) => call<ApiChapter[]>('/chapters?' + qs(q), {}, true, 15000),
+  characterImages: () => call<{ items: CharacterImage[] }>('/assets/characters', {}, false, 10000),
+  chapters: (q: { pack: string; characterId: string; language?: string }) => call<ApiChapter[]>('/chapters?' + qs(q), {}, true, q.language && q.language !== 'ko' ? 120000 : 15000),
   // aiMode 를 빼면 옛 예시는 mock 채점이라 꼭 live 로 보내요
   start: startSession,
   // AI 응답은 5초를 넘을 수 있어요. 네트워크 오류는 같은 clientTurnId 로 두 번까지 다시 보내요.
@@ -270,8 +277,9 @@ export const api = {
     }
     throw last;
   },
-  hint: (id: string, step: 1 | 2) => call<HintRes>(`/sessions/${id}/hint`, { method: 'POST', body: JSON.stringify({ step }) }),
-  retry: (id: string) => call<PlaySession>(`/sessions/${id}/retry`, { method: 'POST', body: '{}' }),
+  hint: (id: string, step: 1 | 2) => call<HintRes>(`/sessions/${id}/hint`, { method: 'POST', body: JSON.stringify({ step }) }, true, 120000),
+  retry: (id: string, subtitleLanguage?: string) => call<PlaySession>(`/sessions/${id}/retry`, { method: 'POST', body: JSON.stringify({subtitleLanguage}) }, true, 120000),
+  correct: (id: string, turnId: string) => call<PlaySession>(`/sessions/${id}/correction`, { method: 'POST', body: JSON.stringify({turnId}) }),
   pause: (id: string) => call<PlaySession>(`/sessions/${id}/pause`, { method: 'POST', body: '{}' }),
   report: (id: string) => call<SessionReport>(`/sessions/${id}/report`),
   makeReport: (id: string) => call<SessionReport>(`/sessions/${id}/report`, { method: 'POST', body: '{}' }),

@@ -15,7 +15,7 @@ export default function AuthCallback() {
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     if (Platform.OS !== 'web') {
-      router.replace('/settings');
+      router.replace(st.languageSelected ? '/settings' : '/onboarding/lang');
       return;
     }
     const url = window.location.href;
@@ -23,8 +23,7 @@ export default function AuthCallback() {
     window.history.replaceState(null, '', '/auth/callback');
     finishGoogle(url).then((r) => {
       if (r.ok) {
-        st.set({ onboarded: true });
-        router.replace('/home');
+        router.replace(st.languageSelected && st.onboarded ? '/home' : '/onboarding/lang');
       } else setErr(r.reason === 'cancel' ? t('로그인을 취소했어요. 게스트 기록은 그대로예요.') : t('로그인하지 못했어요.'));
     });
   }, []);

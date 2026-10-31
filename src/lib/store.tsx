@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CharId, PersonaId } from './data';
 import type { Ending, Mark, View3 } from './engine';
@@ -57,6 +57,7 @@ export type DayRecord = { date: string; sceneId: string; title: string; score: n
 type State = {
   pack: 'ko' | 'en';
   lang: string;
+  languageSelected: boolean;
   char: CharId;
   persona: PersonaId;
   coins: number;
@@ -76,6 +77,7 @@ type State = {
 const initial: State = {
   pack: 'ko',
   lang: 'en',
+  languageSelected: false,
   char: 'seoyun',
   persona: 'calm',
   coins: 0,
@@ -145,6 +147,8 @@ const Store = createContext<Ctx | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [s, setS] = useState<State>(initial);
   const [hydrated, setHydrated] = useState(false);
+  // Record sync depends on this callback. A new function after every response restarts the fetch effect.
+  const set = useCallback((p: Partial<State>) => setS(o => ({ ...o, ...p, pack: 'ko' })), []);
   const ref = useRef(s);
   useEffect(() => {
     ref.current = s;
@@ -154,10 +158,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((raw) => {
-        if (!raw) return;
-        const saved = { ...initial, ...JSON.parse(raw) } as State;
-        // 표시 언어는 지원하는 언어로만 (학습 기록은 그대로)
-        setS({ ...saved, lang: normLang(saved.lang, saved.pack) });
+        if (raw) {
+          const saved = JSON.parse(raw);
+          setS({ ...initial, ...saved, pack: 'ko', lang: normLang(saved.lang) });
+        }
       })
       .catch(() => null)
       .finally(() => setHydrated(true));
@@ -174,7 +178,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ...s,
       hydrated,
       streak: !s.demo && s.serverStreak != null ? s.serverStreak : streakOf(s.studyDays),
-      set: (p) => setS((o) => ({ ...o, ...p })),
+      set,
       addCoins: (n) => setS((o) => ({ ...o, coins: Math.max(0, o.coins + n) })),
       addMistake: (m) => setS((o) => ({ ...o, mistakes: [m, ...o.mistakes.filter((x) => x.id !== m.id)] })),
       completeScene: ({ score, ...r }) => {
@@ -195,7 +199,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       setDemo: (on) => setS((o) => (on ? { ...o, demo: true, ...(o.history.length || o.mistakes.length ? {} : demoSeed()) } : { ...o, demo: false })),
     }),
-    [s, hydrated],
+    [s, hydrated, set],
   );
   return <Store.Provider value={value}>{children}</Store.Provider>;
 }

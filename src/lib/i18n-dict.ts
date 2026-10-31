@@ -555,4 +555,6 @@ export const DICT: Record<string, [string, string, string]> = {
   "{who} 같은 말을 한다면?": ["{who} — what if you said the same thing?", "{who}同じことを言ったら？", "{who}说同样的话会怎样？"],
   "복습 노트 {n}개 저장됨": ["{n} saved to review notes", "復習ノートに{n}個保存", "已保存 {n} 条到复习笔记"],
   "틀린 문장 다시 말해 보기": ["Say the wrong sentence again", "間違えた文をもう一度言ってみる", "把说错的句子再说一遍"],
+  "다시 말하기를 준비하지 못했어요. 잠시 후 다시 눌러 주세요.": ["Couldn't get ready to say it again. Please tap again in a moment.", "言い直しの準備ができませんでした。少ししてからもう一度押してください。", "无法准备重说，请稍后再点一次。"],
+  "장면 진행률": ["Scene progress", "場面の進み具合", "场景进度"],
 };

@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Btn, Card, Chip, Screen, T, Tag, TopBar } from '../../components/ui';
 import { C } from '../../lib/theme';
-import { IMG, PERSONAS, PersonaId, charById } from '../../lib/data';
+import { IMG, PERSONAS, PersonaId, SERVER_CHAR, charById } from '../../lib/data';
+import { api, absUrl, CharacterImage } from '../../lib/api';
+import { personaPhoto } from '../../lib/persona-photo';
 import { useStore } from '../../lib/store';
 import * as haptic from '../../lib/haptics';
 import { useT } from '../../lib/i18n';
@@ -15,6 +17,15 @@ const SLOTS = [-2, -1, 0, 1, 2];
 // 05 성격 고르기: 카드 3장이 펼쳐지고, 고르면 바로 장면 시작
 export default function PersonaPick() {
   const { char, persona, set } = useStore();
+  const [images, setImages] = useState<CharacterImage[]>([]);
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    api.characterImages().then(result => {
+      if (active) setImages(result.items);
+    }).catch(() => { /* Keep bundled portraits when offline. */ });
+    return () => { active = false; };
+  }, []);
   const list = PERSONAS[char];
   const [sel, setSel] = useState<PersonaId>(persona);
   const c = charById(char);
@@ -63,6 +74,8 @@ export default function PersonaPick() {
       <View style={{ height: 300, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
         {order.map((pid, i) => {
           const p = list.find((x) => x.id === pid)!;
+          const photo = personaPhoto(images, SERVER_CHAR[char], pid);
+          const photoUrl = photo && !failedImages.includes(photo) ? absUrl(photo) : null;
           const mid = i === 1;
           const v = pos[pid];
           const tf = {
@@ -78,6 +91,9 @@ export default function PersonaPick() {
             <AnimatedPressable
               key={pid}
               onPress={() => pick(pid)}
+              accessibilityRole="button"
+              accessibilityLabel={`${p.name} 성격 선택`}
+              accessibilityState={{ selected: pid === sel }}
               style={{
                 position: 'absolute',
                 width: 176,
@@ -95,7 +111,13 @@ export default function PersonaPick() {
               }}
             >
               <View style={{ height: 160, backgroundColor: '#F8F8F9', overflow: 'hidden' }}>
-                <Image source={IMG.card[char]} style={{ width: '170%', height: 437, marginLeft: '-35%', marginTop: 6 }} resizeMode="cover" />
+                <Image
+                  key={photoUrl || char}
+                  source={photoUrl ? { uri: photoUrl } : IMG.card[char]}
+                  onError={photoUrl ? () => setFailedImages(current => [...current, photo!]) : undefined}
+                  style={{ width: '170%', height: 437, marginLeft: '-35%', marginTop: 6 }}
+                  resizeMode="cover"
+                />
               </View>
               <View style={{ padding: 12 }}>
                 <T s="h3">{t(p.name)} <T style={{ color: C.sub }}>{'•'.repeat(p.id === 'picky' ? 3 : p.id === 'tease' ? 2 : 1)}</T></T>
