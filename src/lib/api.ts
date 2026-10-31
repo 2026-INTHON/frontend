@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 // 백엔드 API (Next.js) 연결. 문서: <API_BASE>/api/v1/docs
 // 주소는 .env 의 EXPO_PUBLIC_API_URL 로 바꿀 수 있어요.
 export const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'https://inthon-demo-20261031-dh.koreacentral.cloudapp.azure.com').replace(/\/$/, '') + '/api/v1';
@@ -80,8 +82,14 @@ export const api = {
   speech: (id: string) => call<{ audioUrl: string }>(`/sessions/${id}/speech`, { method: 'POST' }, true, 20000),
   transcribe: async (uri: string, pack: string) => {
     const fd = new FormData();
-    // React Native 는 {uri, name, type} 형태로 파일을 보내요
-    fd.append('file', { uri, name: 'answer.m4a', type: 'audio/m4a' } as any);
+    if (Platform.OS === 'web') {
+      // 웹 녹음은 blob: 주소라서 실제 파일(Blob)로 바꿔서 보내요
+      const blob = await (await fetch(uri)).blob();
+      fd.append('file', blob, blob.type.includes('webm') ? 'answer.webm' : 'answer.m4a');
+    } else {
+      // 앱은 {uri, name, type} 형태로 파일을 보내요
+      fd.append('file', { uri, name: 'answer.m4a', type: 'audio/m4a' } as any);
+    }
     fd.append('pack', pack);
     return call<{ transcriptId: string; text: string; audioMetrics?: { fillerCount?: number; pauseCount?: number } }>('/speech/transcriptions', { method: 'POST', body: fd }, true, 30000);
   },

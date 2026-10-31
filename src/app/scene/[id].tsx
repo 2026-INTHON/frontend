@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, ImageBackground, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import * as haptic from '../../lib/haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Btn, Hearts, IconBtn, Sheet, T, Tag } from '../../components/ui';
@@ -118,7 +118,7 @@ export default function SceneScreen() {
     if (phase === 'listening') return micStop();
     holdAt.current = Date.now();
     stopPlay();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    haptic.tap();
     const ok = await rec.start();
     if (!ok) {
       setPhase('typing');
@@ -167,10 +167,10 @@ export default function SceneScreen() {
     setLog((g) => [...g, { who: 'me', text: ans, tag: o.ok ? (g.some((x) => x.tag === 'bad') ? 'good' : undefined) : 'bad' }, { who: 'char', text: o.reply }]);
     setLine({ line: o.reply });
     if (o.ok) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      haptic.good();
       setPhase('feedback');
     } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      haptic.bad();
       st.addMistake({ id: `${local.id}-${Date.now()}`, scene: eng.current!.title, title: eng.current!.title, who: `${ch.name} · ${persona.name}`, when: '오늘', said: ans, better: o.better, why: o.why, fixed: false, line: eng.current!.line.line });
       if (o.failed) return setFail(true);
       setPhase('mistake');
@@ -442,7 +442,7 @@ export default function SceneScreen() {
       {/* 일시정지 */}
       <Modal visible={pause} transparent animationType="fade" onRequestClose={() => setPause(false)}>
         <View style={{ flex: 1, backgroundColor: C.dim, justifyContent: 'center', padding: 24 }}>
-          <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 24, gap: 10 }}>
+          <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 24, gap: 10, width: '100%', maxWidth: 382, alignSelf: 'center' }}>
             <IconBtn name="pause" bg={C.lime} />
             <T s="h2">잠깐 멈췄어요</T>
             <T s="sub">지금 나가도 여기까지 저장돼요.{'\n'}다음에 이어서 할 수 있어요.</T>
@@ -455,7 +455,7 @@ export default function SceneScreen() {
       {/* 장면 실패 */}
       <Modal visible={fail} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: C.dim, justifyContent: 'center', padding: 24 }}>
-          <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 24, gap: 10 }}>
+          <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 24, gap: 10, width: '100%', maxWidth: 382, alignSelf: 'center' }}>
             <Ionicons name="heart-dislike" size={36} color={C.red} />
             <T s="h2">체력이 다 떨어졌어요</T>
             <T s="sub">이번엔 {ch.call}을 설득하지 못했어요.{'\n'}괜찮아요, 실수는 연습이니까요.</T>

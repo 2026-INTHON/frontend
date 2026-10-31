@@ -52,7 +52,7 @@ export default function Home() {
       {/* 20 연속 출석 축하 (데모용으로 처음 한 번 떠요) */}
       <Modal visible={streak} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: C.dim, justifyContent: 'center', padding: 28 }}>
-          <View style={{ backgroundColor: C.white, borderRadius: 28, padding: 24, alignItems: 'center', gap: 10 }}>
+          <View style={{ backgroundColor: C.white, borderRadius: 28, padding: 24, alignItems: 'center', gap: 10, width: '100%', maxWidth: 360, alignSelf: 'center' }}>
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: C.lime, alignItems: 'center', justifyContent: 'center' }}>
               <Feather name="zap" size={32} color={C.ink} />
             </View>
