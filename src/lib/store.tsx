@@ -45,6 +45,7 @@ export type LastResult = {
 export type DayRecord = { date: string; sceneId: string; title: string; score: number | null };
 
 type State = {
+  soundEffects: boolean;
   pack: 'ko' | 'en';
   lang: string;
   languageSelected: boolean;
@@ -65,6 +66,7 @@ type State = {
 };
 
 const initial: State = {
+  soundEffects: true,
   pack: 'ko',
   lang: 'en',
   languageSelected: false,

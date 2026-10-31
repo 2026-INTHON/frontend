@@ -327,7 +327,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
   let clientTurn: { id: string; text: string } | null = null;
   const t = { mistakes: 0, best: '', worst: '', fixed: [] as { said: string; better: string }[] };
   const char = charFromServer(ses.characterId, o.char);
-  const lineOf = (s: PlaySession): Line => ({ line: s.npc.text, action: s.npc.action ?? undefined, cues: normCues(s.npc.cues) as Cue[], sub: subtitleText(s.npc.subtitle, o.lang), audio: s.npc.audioUrl ? absUrl(s.npc.audioUrl) : null });
+  const lineOf = (s: PlaySession): Line => ({ line: s.npc.text, emotion:s.npc.emotion, action: s.npc.action ?? undefined, cues: normCues(s.npc.cues) as Cue[], sub: subtitleText(s.npc.subtitle, o.lang), audio: s.npc.audioUrl ? absUrl(s.npc.audioUrl) : null });
 
   const e: Engine = {
     mode: 'live',
@@ -392,7 +392,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         native,
         voice: !!voice,
         reply: r.turn.npcReply,
-        replyLine: { line: r.turn.npcReply, action: r.turn.action, cues: normCues(r.turn.cues) as Cue[], sub: subtitleText(r.turn.npcReplySubtitle, o.lang), audio: r.turn.audioUrl ? absUrl(r.turn.audioUrl) : null, turnId: r.turn.id },
+        replyLine: { line: r.turn.npcReply, emotion:r.turn.emotion, action: r.turn.action, cues: normCues(r.turn.cues) as Cue[], sub: subtitleText(r.turn.npcReplySubtitle, o.lang), audio: r.turn.audioUrl ? absUrl(r.turn.audioUrl) : null, turnId: r.turn.id },
         render: img(r.turn.render),
         lifeDelta: r.turn.lifeDelta ?? 0,
         tone: f.tone?.label ?? null,
