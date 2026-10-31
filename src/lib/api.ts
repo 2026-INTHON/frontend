@@ -217,7 +217,7 @@ export const api = {
   // aiMode 를 빼면 옛 예시는 mock 채점이라 꼭 live 로 보내요
   start: (sceneId: string, o: { personalityId?: string; subtitleLanguage?: string }) => call<PlaySession>('/sessions', { method: 'POST', body: JSON.stringify({ sceneId, aiMode: 'live', ...o }) }, true, 30000),
   // AI 응답은 5초를 넘을 수 있어요. 네트워크 오류는 같은 clientTurnId 로 두 번까지 다시 보내요.
-  turn: async (id: string, b: { clientTurnId: string; inputType: 'text' | 'voice'; text: string; transcriptId?: string }) => {
+  turn: async (id: string, b: { clientTurnId: string; inputType: 'text' | 'voice'; text: string; transcriptId?: string; realtime?: boolean }) => {
     let last: unknown;
     for (let i = 0; i < 3; i++) {
       try {
@@ -240,6 +240,11 @@ export const api = {
     call<GenerationJob>('/chapter-generations', { method: 'POST', body: JSON.stringify(b) }, true, 30000),
   generations: () => call<GenerationJob[] | { items: GenerationJob[] }>('/chapter-generations', {}, true, 10000).then((d) => (Array.isArray(d) ? d : (d?.items ?? []))),
   retryGeneration: (id: string) => call<GenerationJob>(`/chapter-generations/${id}/retry`, { method: 'POST', body: '{}' }),
+  // 녹음 중 전사용 60초 임시 자격증명 (value 는 메모리에만, 로그·저장 금지)
+  realtimeSession: (pack: string) => call<{ value: string; websocketUrl: string; expiresAt?: string | number }>('/speech/realtime-session', { method: 'POST', body: JSON.stringify({ pack }) }, true, 10000),
+  pushConfig: () => call<{ enabled: boolean; publicKey: string | null }>('/notifications/push/config', {}, true, 10000),
+  pushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) => call<{ id: string }>('/notifications/push/subscriptions', { method: 'POST', body: JSON.stringify(sub) }, true, 10000),
+  pushUnsubscribe: (id: string) => call<void>(`/notifications/push/subscriptions/${id}`, { method: 'DELETE' }, true, 10000),
   result: (id: string) => call<SessionResult>(`/sessions/${id}/result`),
   // 반응 대사는 {turnId}, 지금 노드 대사는 {} (서명 URL은 10분 유효)
   speech: (id: string, turnId?: string) => call<{ audioUrl: string }>(`/sessions/${id}/speech`, { method: 'POST', body: JSON.stringify(turnId ? { turnId } : {}) }, true, 20000),

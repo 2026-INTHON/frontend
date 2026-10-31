@@ -1,6 +1,6 @@
 import { ScrollView, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Btn, Card, Coin, Screen, T, Tag } from '../components/ui';
 import { C, F } from '../lib/theme';
 import { useStore } from '../lib/store';
@@ -9,7 +9,22 @@ import { ReportCard } from '../components/report-card';
 // 15 결과: 방금 끝낸 장면의 결과 (저장돼 있어서 새로고침해도 그대로)
 export default function Result() {
   const st = useStore();
+  const q = useLocalSearchParams<{ sessionId?: string }>();
   const r = st.lastResult;
+  // 완료 알림으로 열었는데 다른 세션이면 그 세션의 보고서만 보여 줘요
+  if (q.sessionId && q.sessionId !== r?.sessionId) {
+    return (
+      <Screen>
+        <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
+          <T s="h2">상세 보고서</T>
+          <ReportCard sessionId={String(q.sessionId)} />
+        </ScrollView>
+        <View style={{ paddingHorizontal: 16 }}>
+          <Btn label="홈으로" icon="home" onPress={() => router.replace('/home')} />
+        </View>
+      </Screen>
+    );
+  }
   if (!r) {
     return (
       <Screen>

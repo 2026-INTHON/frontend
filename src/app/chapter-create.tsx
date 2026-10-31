@@ -7,6 +7,7 @@ import { C, F } from '../lib/theme';
 import { CHARACTERS, CharId, PERSONAS, PersonaId, SERVER_CHAR, SERVER_PERSONA } from '../lib/data';
 import { api, ApiError } from '../lib/api';
 import { useStore } from '../lib/store';
+import { PushRow } from '../components/push-row';
 
 // 나만의 챕터 만들기: 상황을 적으면 서버가 2~4개 서브 챕터를 만들어요 (만드는 동안 다른 학습 가능)
 export default function ChapterCreate() {
@@ -77,6 +78,9 @@ export default function ChapterCreate() {
           ))}
         </View>
         {err ? <T s="label">{err}</T> : null}
+        <View style={{ backgroundColor: C.white, borderRadius: 16, padding: 14 }}>
+          <PushRow />
+        </View>
       </ScrollView>
       <View style={{ paddingHorizontal: 16, gap: 6 }}>
         <Btn label={busy ? '보내는 중…' : '만들기 시작'} icon="star" disabled={busy || prompt.trim().length < 10} onPress={submit} />

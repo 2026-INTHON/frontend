@@ -8,6 +8,8 @@ import { LANGS } from '../lib/data';
 import { useStore } from '../lib/store';
 import { useAccount } from '../lib/useAccount';
 import { GoogleButton } from '../components/google-button';
+import { PushRow } from '../components/push-row';
+import { disablePush } from '../lib/push';
 
 // 21 설정
 export default function Settings() {
@@ -38,6 +40,7 @@ export default function Settings() {
         <Card style={{ gap: 14 }}>
           <Row k="매일 연습 알림" right={<Toggle value={noti} onValueChange={setNoti} />} />
           <Row k="알림 시간" right={<T s="label">오후 9:00</T>} />
+          <PushRow />
         </Card>
         <T s="small" style={{ marginTop: 8 }}>계정</T>
         <Card style={{ gap: 14 }}>
@@ -53,7 +56,7 @@ export default function Settings() {
           <Row k="요금제" right={<T s="label">{st.subscribed ? 'PRO' : '무료 · PRO 보기'}</T>} />
           <Row k="코인" right={<Coin n={st.coins} />} />
           {acc.user && !acc.user.isGuest ? (
-            <Pressable onPress={async () => { await acc.logout(); st.set({ onboarded: false }); router.replace('/'); }} accessibilityRole="button">
+            <Pressable onPress={async () => { await disablePush(); await acc.logout(); st.set({ onboarded: false }); router.replace('/'); }} accessibilityRole="button">
               <T s="label" style={{ color: C.sub }}>로그아웃</T>
             </Pressable>
           ) : null}

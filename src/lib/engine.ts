@@ -70,7 +70,7 @@ export interface Engine {
   maxLives: number;
   progress(): string | undefined;
   hint(step: 1 | 2): Promise<Hint>;
-  submit(text: string, voice?: { transcriptId?: string }): Promise<Out>;
+  submit(text: string, voice?: { transcriptId?: string; realtime?: boolean }): Promise<Out>;
   next(): void; // 다음 대사로
   skip(): boolean; // 데모 모드에서만: △ 그대로 진행 / 정답 보고 넘어가기 (true 면 장면 끝)
   canSkip: boolean;
@@ -290,7 +290,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       if (!clientTurn || clientTurn.text !== text) clientTurn = { id: turnId(), text };
       let r: SubmitTurnResult;
       try {
-        r = await api.turn(ses.id, { clientTurnId: clientTurn.id, inputType: voice ? 'voice' : 'text', text, transcriptId: voice?.transcriptId });
+        r = await api.turn(ses.id, { clientTurnId: clientTurn.id, inputType: voice ? 'voice' : 'text', text, transcriptId: voice?.transcriptId, realtime: voice?.realtime || undefined });
       } catch (err) {
         throw wrapErr(err); // clientTurn 은 그대로 둬서 다시 보내면 같은 ID
       }
@@ -318,13 +318,14 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         }
       }
       const f = r.turn.feedback ?? ({} as SubmitTurnResult['turn']['feedback']);
-      const isVoice = !!voice;
+      // 녹음 중 전사(realtime)는 속도·침묵을 재지 않아요 → 그 항목은 숨김
+      const isVoice = !!voice && !voice.realtime;
       return {
         mark,
         label: native ? '모국어로 답했어요' : ev?.label || MARK_LABEL[mark],
         ok,
         native,
-        voice: isVoice,
+        voice: !!voice,
         reply: r.turn.npcReply,
         replyLine: { line: r.turn.npcReply, sub: r.turn.npcReplySubtitle?.text ?? null, audio: r.turn.audioUrl ? absUrl(r.turn.audioUrl) : null, turnId: r.turn.id },
         render: img(r.turn.render),

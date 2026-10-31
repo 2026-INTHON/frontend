@@ -12,6 +12,7 @@ import { createEngine, Engine, Hint, Mark, Out, SceneError } from '../../lib/eng
 import { speak, stopSpeak } from '../../lib/voice';
 import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
+import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
 import { useStore } from '../../lib/store';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized' | 'reaction' | 'mistake' | 'feedback';
@@ -55,6 +56,12 @@ export default function SceneScreen() {
   const [hintNudge, setHintNudge] = useState(false);
   const [log, setLog] = useState<Log[]>([]);
   const holdAt = useRef(0);
+  // 웹 + 서버 모드면 녹음 중 전사, 안 되면 파일 녹음 후 전사
+  const rt = useRef<RealtimeTranscriber | null>(null);
+  const recMode = useRef<'rt' | 'file'>('file');
+  const [preview, setPreview] = useState('');
+  const [rtHeard, setRtHeard] = useState(false);
+  const [rtStat, setRtStat] = useState({ ms: 0, level: -60 });
   const player = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
 
   const E = eng.current;
@@ -93,8 +100,24 @@ export default function SceneScreen() {
       off();
       stopSpeak();
       player.current?.remove();
+      rt.current?.close();
     };
   }, []);
+
+  const canRealtime = () => eng.current?.mode === 'live' && realtimeSupported();
+  // 말할 차례가 되면 전사 연결을 미리 준비 (실패해도 녹음 버튼은 파일 방식으로 동작)
+  useEffect(() => {
+    if (phase !== 'talk' || !canRealtime()) return;
+    if (!rt.current) rt.current = new RealtimeTranscriber(st.pack);
+    rt.current.prepare().catch(() => null);
+  }, [phase]);
+  // 녹음 중 시간·소리 크기
+  useEffect(() => {
+    if (phase !== 'listening' || recMode.current !== 'rt') return;
+    const t0 = Date.now();
+    const iv = setInterval(() => setRtStat({ ms: Date.now() - t0, level: rt.current?.level ?? -60 }), 120);
+    return () => clearInterval(iv);
+  }, [phase]);
 
   // 판정 기다리는 시간 (3초 넘으면 '생각 중', 5초 넘으면 '기다리는 중')
   useEffect(() => {
@@ -156,6 +179,22 @@ export default function SceneScreen() {
     stopPlay();
     haptic.tap();
     setNotice(null);
+    setPreview('');
+    if (canRealtime()) {
+      try {
+        if (!rt.current) rt.current = new RealtimeTranscriber(st.pack);
+        rt.current.onPreview = setPreview;
+        rt.current.onAutoStop = () => micStop();
+        await rt.current.start();
+        recMode.current = 'rt';
+        setRtStat({ ms: 0, level: -60 });
+        setPhase('listening');
+        return;
+      } catch {
+        rt.current?.close(); // 실시간이 안 되면 파일 녹음으로
+      }
+    }
+    recMode.current = 'file';
     const ok = await rec.start();
     if (!ok) {
       setNotice('마이크를 켜지 못했어요. 직접 입력해 주세요.');
@@ -169,6 +208,24 @@ export default function SceneScreen() {
     if (Date.now() - holdAt.current > 450) micStop();
   }
   async function micStop() {
+    if (recMode.current === 'rt') {
+      setPhase('recognizing');
+      try {
+        const t = await rt.current!.stop();
+        if (!t) throw new Error('empty');
+        setHeard(t);
+        setTid(undefined);
+        setRtHeard(true);
+        setEditHeard(false);
+        setPhase('recognized');
+      } catch {
+        rt.current?.close();
+        setNotice('잘 못 들었어요. 다시 말하거나 직접 입력해 주세요.');
+        setPhase('talk');
+      }
+      return;
+    }
+    setRtHeard(false);
     const uri = await rec.stop();
     setPhase('recognizing');
     const e = eng.current!;
@@ -197,7 +254,7 @@ export default function SceneScreen() {
     setJudging(true);
     let o: Out;
     try {
-      o = await eng.current!.submit(ans, voice ? { transcriptId: tid } : undefined);
+      o = await eng.current!.submit(ans, voice ? { transcriptId: tid, realtime: rtHeard } : undefined);
     } catch (err) {
       // AI 오류: 체력 그대로, 같은 답을 다시 보낼 수 있게 (가짜 판정 없음)
       setJudging(false);
@@ -319,7 +376,7 @@ export default function SceneScreen() {
   const listening = phase === 'listening';
   const busy = phase === 'recognizing';
   const showDock = (phase === 'talk' || listening || busy) && !judging && ready;
-  const sec = Math.floor(rec.ms / 1000);
+  const sec = Math.floor((recMode.current === 'rt' ? rtStat.ms : rec.ms) / 1000);
   const scene = { no: E?.no ?? '', title: E?.title ?? '', situation: E?.brief.situation ?? '', goal: E?.brief.goal ?? '', partner: E?.brief.partner };
 
   return (
@@ -395,9 +452,9 @@ export default function SceneScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.red }} />
                 <T s="label">듣는 중… 0:{String(sec).padStart(2, '0')}</T>
-                <Wave level={rec.level} />
+                <Wave level={recMode.current === 'rt' ? rtStat.level : rec.level} />
               </View>
-              <T s="small" style={{ color: C.ink }}>말을 끝내면 한 번에 글자로 바꿔요</T>
+              {preview ? <T s="body" style={{ textAlign: 'center' }} numberOfLines={3}>{preview}</T> : <T s="small" style={{ color: C.ink }}>{recMode.current === 'rt' ? '말하는 동안 바로 글자로 바꿔요' : '말을 끝내면 한 번에 글자로 바꿔요'}</T>}
             </View>
           ) : null}
           {busy ? (
