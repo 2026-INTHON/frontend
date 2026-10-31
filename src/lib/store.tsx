@@ -47,6 +47,7 @@ export type DayRecord = { date: string; sceneId: string; title: string; score: n
 type State = {
   pack: 'ko' | 'en';
   lang: string;
+  languageSelected: boolean;
   char: CharId;
   persona: PersonaId;
   coins: number;
@@ -66,6 +67,7 @@ type State = {
 const initial: State = {
   pack: 'ko',
   lang: 'en',
+  languageSelected: false,
   char: 'seoyun',
   persona: 'calm',
   coins: 0,
@@ -144,7 +146,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((raw) => {
-        if (raw) setS({ ...initial, ...JSON.parse(raw) });
+        if (raw) {
+          const saved = JSON.parse(raw);
+          setS({ ...initial, ...saved, pack: 'ko', lang: ['ko', 'ja', 'en', 'zh'].includes(saved.lang) ? saved.lang : 'en' });
+        }
       })
       .catch(() => null)
       .finally(() => setHydrated(true));
@@ -161,7 +166,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ...s,
       hydrated,
       streak: !s.demo && s.serverStreak != null ? s.serverStreak : streakOf(s.studyDays),
-      set: (p) => setS((o) => ({ ...o, ...p })),
+      set: (p) => setS((o) => ({ ...o, ...p, pack: 'ko' })),
       addCoins: (n) => setS((o) => ({ ...o, coins: Math.max(0, o.coins + n) })),
       addMistake: (m) => setS((o) => ({ ...o, mistakes: [m, ...o.mistakes.filter((x) => x.id !== m.id)] })),
       completeScene: ({ score, ...r }) => {

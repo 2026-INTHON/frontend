@@ -10,10 +10,10 @@ import { useAccount } from '../lib/useAccount';
 // 01 웰컴
 
 export default function Welcome() {
-  const { set, onboarded, setDemo } = useStore();
+  const { onboarded, languageSelected, setDemo } = useStore();
   const acc = useAccount();
   // 이미 시작한 사람은 바로 홈으로 (새로고침해도 처음부터 다시 하지 않아요)
-  if (onboarded) return <Redirect href="/home" />;
+  if (onboarded) return <Redirect href={languageSelected ? '/home' : '/onboarding/lang'} />;
   return (
     <Screen bg={C.white}>
       <View style={{ paddingHorizontal: 24, marginTop: 56 }}>
@@ -25,7 +25,7 @@ export default function Welcome() {
         <Lineup />
       </View>
       <View style={{ paddingHorizontal: 16, gap: 8 }}>
-        <Btn label="시작하기" icon="arrow-right" onPress={() => router.push('/onboarding/pack')} />
+        <Btn label="시작하기" icon="arrow-right" onPress={() => router.push('/onboarding/lang')} />
         <GoogleButton
           label="Google로 로그인"
           busy={acc.busy}
@@ -33,12 +33,11 @@ export default function Welcome() {
             const r = await acc.login();
             // 성공하거나 로그인 서버가 꺼져 있으면(데모) 바로 홈으로
             if (r.ok || r.reason === 'disabled') {
-              set({ onboarded: true });
-              router.replace('/home');
+              router.replace('/onboarding/lang');
             }
           }}
         />
-        <Btn label="로그인 없이 시작하기" kind="ghost" small onPress={() => { setDemo(true); router.push('/onboarding/pack'); }} />
+        <Btn label="로그인 없이 시작하기" kind="ghost" small onPress={() => { setDemo(false); router.push('/onboarding/lang'); }} />
         {acc.msg && acc.enabled !== false ? <T s="small" style={{ textAlign: 'center' }}>{acc.msg}</T> : null}
       </View>
     </Screen>

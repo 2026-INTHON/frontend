@@ -1,41 +1,46 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Btn, Screen, T, TopBar, Tag } from '../../components/ui';
 import { C } from '../../lib/theme';
 import { LANGS } from '../../lib/data';
+import { learningCopy } from '../../lib/learning-copy';
 import { useStore } from '../../lib/store';
 
-// 03 모국어 고르기 (팩을 고르면 바로 이어짐)
+const FLAGS: Record<string, number> = { ko: require('../../../assets/flags/ko.png'), ja: require('../../../assets/flags/ja.png'), en: require('../../../assets/flags/en.png'), zh: require('../../../assets/flags/zh.png') };
+
 export default function Lang() {
-  const { pack, lang, set } = useStore();
-  const learning = pack === 'ko' ? 'ko' : 'en';
-  const [sel, setSel] = useState(lang === learning ? LANGS.find((l) => l.id !== learning)!.id : lang);
+  const { lang, onboarded, set } = useStore();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const [sel, setSel] = useState(lang);
+  const copy = learningCopy(sel);
   return (
     <Screen>
       <TopBar />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16, gap: 8 }}>
-        <View style={{ marginTop: 8 }}>
-          <Tag label={pack === 'ko' ? '한국어팩' : '영어팩'} tone="white" />
-        </View>
-        <T s="h1" style={{ marginTop: 8 }}>힌트와 설명을 볼 언어</T>
-        {LANGS.map((l) => {
-          const dis = l.id === learning;
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24, gap: 12 }}>
+        <Tag label={copy.koreanPractice} tone="white" />
+        <T s="h1" style={{ marginTop: 8 }}>{copy.chooseLanguage}</T>
+        <T s="sub" style={{ marginBottom: 12 }}>{copy.languageHelp}</T>
+        {LANGS.map(l => {
           const on = sel === l.id;
           return (
-            <Pressable key={l.id} disabled={dis} onPress={() => setSel(l.id)} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, height: 62, borderRadius: 16, backgroundColor: on ? C.lime : dis ? C.bg : C.white, borderWidth: on ? 2 : 1, borderColor: on ? C.ink : C.line }}>
-              <View style={{ flex: 1 }}>
-                <T s="h3" style={{ fontSize: 16, color: dis ? C.sub : C.ink }}>{l.name}</T>
-                <T s="small">{dis ? '지금 배우는 언어예요' : l.ko}</T>
-              </View>
+            <Pressable key={l.id} onPress={() => setSel(l.id)} accessibilityRole="radio" accessibilityLabel={l.name} accessibilityState={{ checked: on }}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 20, minHeight: 74, borderRadius: 16, backgroundColor: on ? C.lime : C.white, borderWidth: 2, borderColor: on ? C.ink : C.line, opacity: pressed ? .8 : 1 })}>
+              <Image source={FLAGS[l.id]} style={{ width: 36, height: 36 }} resizeMode="contain" accessible={false} />
+              <T s="h3" style={{ flex: 1 }}>{l.name}</T>
               {on ? <Feather name="check-circle" size={22} color={C.ink} /> : null}
             </Pressable>
           );
         })}
       </ScrollView>
-      <View style={{ paddingHorizontal: 16 }}>
-        <Btn label="다음" icon="arrow-right" onPress={() => { set({ lang: sel }); router.push('/onboarding/character'); }} />
+      <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        <Btn label={returnTo === 'settings' ? copy.save : copy.next} icon="arrow-right" onPress={() => {
+          set({ lang: sel, languageSelected: true, pack: 'ko' });
+          if (returnTo === 'settings') router.replace('/settings');
+          else if (onboarded) router.replace('/home');
+          else router.push('/onboarding/character');
+        }} />
       </View>
     </Screen>
   );

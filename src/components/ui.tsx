@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle, Modal, Image, Animated, Easing } from 'react-native';
+import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle, Modal, Image, Animated, Easing, ScrollView } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -137,9 +137,9 @@ export function Sheet({ visible, onClose, children, dim = true }: { visible: boo
       <View style={FRAME}>
         <AnimatedPressable style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: dim ? 'rgba(17,17,17,0.28)' : 'transparent', opacity: a }} onPress={onClose} />
         <View pointerEvents="box-none" style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <Animated.View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: -4 }, elevation: 12, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [480, 0] }) }] }}>
+          <Animated.View style={{ maxHeight: '90%', backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: -4 }, elevation: 12, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [480, 0] }) }] }}>
             <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: C.line, marginTop: -12, marginBottom: 16 }} />
-            {children}
+            <ScrollView style={{ maxHeight: '100%' }} contentContainerStyle={{ paddingBottom: 4 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
           </Animated.View>
         </View>
       </View>
