@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "build:web": "expo export -p web",
-    "preview:web": "npx serve dist -s"
+    "preview:web": "npx serve dist -s",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@expo-google-fonts/black-han-sans": "^0.4.1",
@@ -41,6 +42,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4",
     "typescript": "~5.9.2"
   },
   "private": true
