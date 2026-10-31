@@ -54,6 +54,7 @@ export type Final = {
 
 // 엔딩: 마지막 반응 대사(자막·음성) + 표정 이미지 + 정리 카드. 학습 점수와는 별개예요.
 export type Ending = {
+  emotion?: import('./api').Emotion;
   id?: string;
   kind: string; // happy | bad (이야기 결말, 판정 아님)
   title: string;
@@ -67,6 +68,7 @@ export function normEnding(x: ApiEnding, fallbackImage: string | null = null): E
   const d = x.dialogue;
   const r = x.recap;
   return {
+    emotion: x.emotion,
     id: x.id,
     kind: x.kind,
     title: x.title,
@@ -147,6 +149,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
   let first: string | undefined;
   const st = newTrack(scene.turns.length);
   let lastReply = '';
+  let lastEmotion: import('./api').Emotion = 'neutral';
   const polite = scene.char === 'boss' || scene.char === 'prof';
   // 데모 음성 인식: 첫 시도는 일부러 말실수 문장, 그다음은 좋은 문장
   const sample = () => (scene.id === 'boss-report' && i === 0 && st.mistakes === 0 ? '아직 못 했는데요. 일이 너무 많아서요.' : scene.turns[i].sample);
@@ -195,6 +198,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
       const mark: Mark = v.native ? '?' : v.mark;
       const reply = v.native ? '…응? 한국어로 다시 말해 줄래?' : v.mark === 'O' ? turn.goodReply : v.mark === '△' ? turn.midReply : turn.badReply;
       lastReply = reply;
+      lastEmotion = v.native ? 'confused' : (v.mark === 'O' ? turn.replyEmotions?.good : v.mark === '△' ? turn.replyEmotions?.mid : turn.replyEmotions?.bad) ?? 'neutral';
       return {
         mark,
         label: v.native ? '모국어로 답했어요' : MARK_LABEL[mark],
@@ -202,7 +206,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
         native: v.native,
         voice: !!voice,
         reply,
-        replyLine: { line: reply },
+        replyLine: { line: reply, emotion: lastEmotion },
         render: null,
         lifeDelta: v.mark === 'X' && !v.native ? -1 : 0,
         tone: v.tone,
@@ -236,14 +240,16 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
       await new Promise((r) => setTimeout(r, 1400));
       return { text: sample() };
     },
-    async voiceUrl() {
-      return null;
+    async voiceUrl(l) {
+      const speech = await api.previewSpeech({text:(l??e.line).line,pack,characterId:SERVER_CHAR[scene.char],personalityId:SERVER_PERSONA[persona],emotion:l?.emotion??'neutral'});
+      return absUrl(speech.audioUrl);
     },
     async final() {
       const s = scoreOf(st);
       // 데모 엔딩: 서버 엔딩과 같은 모양 (마지막 반응 대사 → 정리 카드)
       const failed = e.lives <= 0;
       const ending: Ending = {
+        emotion: lastEmotion,
         kind: failed ? 'bad' : 'happy',
         title: failed ? '대화가 끊겼어요' : '좋은 인상을 남겼어요',
         text: failed ? '말실수가 쌓여서 상대가 대화를 끝냈어요.' : `${scene.goal}에 성공했어요.`,
