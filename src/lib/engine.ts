@@ -1,4 +1,4 @@
-import { api, absUrl, ApiError, Briefing, HintRes, PlaySession, RawCue, Render, SubmitTurnResult } from './api';
+import { api, absUrl, ApiError, ApiEnding, Briefing, HintRes, PlaySession, RawCue, Render, SubmitTurnResult } from './api';
 import { judge } from './judge';
 import { CharId, Cue, Line, PersonaId, Place, PLACE_OF, SERVER_CHAR, SERVER_PERSONA, Scene, charFromServer, lineFor, personaFromServer, sceneById, sceneForChar } from './data';
 
@@ -48,9 +48,34 @@ export type Final = {
   reach: number | null;
   infer: number | null;
   self: number | null;
-  ending: { kind: string; title: string; text: string } | null;
+  ending: Ending | null;
   nextSceneId: string | null;
 };
+
+// 엔딩: 마지막 반응 대사(자막·음성) + 표정 이미지 + 정리 카드. 학습 점수와는 별개예요.
+export type Ending = {
+  id?: string;
+  kind: string; // happy | bad (이야기 결말, 판정 아님)
+  title: string;
+  text: string;
+  image?: string | null; // 서버가 고른 마지막 표정 (불투명 배경)
+  dialogue?: { turnId?: string; text: string; sub: string | null; audio: string | null } | null;
+  recap?: { title: string; story: string; comment: string; prompt: string; tr: { title: string; story: string; comment: string; prompt: string } | null } | null;
+};
+
+export function normEnding(x: ApiEnding, fallbackImage: string | null = null): Ending {
+  const d = x.dialogue;
+  const r = x.recap;
+  return {
+    id: x.id,
+    kind: x.kind,
+    title: x.title,
+    text: x.text,
+    image: img(x.render) ?? fallbackImage,
+    dialogue: d ? { turnId: d.turnId, text: d.text, sub: d.subtitle?.text ?? null, audio: d.audioUrl ? absUrl(d.audioUrl) : null } : null,
+    recap: r ? { title: r.title, story: r.story, comment: r.comment, prompt: r.prompt, tr: r.translation ? { title: r.translation.title, story: r.translation.story, comment: r.translation.comment, prompt: r.translation.prompt } : null } : null,
+  };
+}
 export type Hint = { clue: { k: string; v: string }[]; thought: string | null; tip: string | null };
 export type Brief = { partner: string; situation: string; goal: string; translation?: Briefing['translation'] };
 
@@ -121,6 +146,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
   let wrong = 0;
   let first: string | undefined;
   const st = newTrack(scene.turns.length);
+  let lastReply = '';
   const polite = scene.char === 'boss' || scene.char === 'prof';
   // 데모 음성 인식: 첫 시도는 일부러 말실수 문장, 그다음은 좋은 문장
   const sample = () => (scene.id === 'boss-report' && i === 0 && st.mistakes === 0 ? '아직 못 했는데요. 일이 너무 많아서요.' : scene.turns[i].sample);
@@ -168,6 +194,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
       }
       const mark: Mark = v.native ? '?' : v.mark;
       const reply = v.native ? '…응? 한국어로 다시 말해 줄래?' : v.mark === 'O' ? turn.goodReply : v.mark === '△' ? turn.midReply : turn.badReply;
+      lastReply = reply;
       return {
         mark,
         label: v.native ? '모국어로 답했어요' : MARK_LABEL[mark],
@@ -214,7 +241,23 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
     },
     async final() {
       const s = scoreOf(st);
-      return { sessionId: null, passed: true, grade: gradeOf(s.score), score: Math.round(s.score), best: st.best, worst: st.worst, coins: 30, mistakes: st.mistakes, fixed: st.fixed, reach: s.reach, infer: s.infer, self: s.self, ending: null, nextSceneId: null };
+      // 데모 엔딩: 서버 엔딩과 같은 모양 (마지막 반응 대사 → 정리 카드)
+      const failed = e.lives <= 0;
+      const ending: Ending = {
+        kind: failed ? 'bad' : 'happy',
+        title: failed ? '대화가 끊겼어요' : '좋은 인상을 남겼어요',
+        text: failed ? '말실수가 쌓여서 상대가 대화를 끝냈어요.' : `${scene.goal}에 성공했어요.`,
+        image: null,
+        dialogue: lastReply ? { text: lastReply, sub: null, audio: null } : null,
+        recap: {
+          title: scene.title,
+          story: scene.situation,
+          comment: failed ? '단서를 다시 보고 표현을 바꿔 보면 결말이 달라져요.' : st.mistakes ? '실수했지만 고쳐 말하면서 끝까지 해냈어요.' : '상황에 맞는 답변만 쏙쏙 골라 했어요!',
+          prompt: failed ? '힌트를 먼저 보고 다시 도전해 볼까요?' : '다음 장면에서 이어서 연습해 봐요.',
+          tr: null,
+        },
+      };
+      return { sessionId: null, passed: !failed, grade: gradeOf(s.score), score: Math.round(s.score), best: st.best, worst: st.worst, coins: failed ? 0 : 30, mistakes: st.mistakes, fixed: st.fixed, reach: s.reach, infer: s.infer, self: s.self, ending, nextSceneId: null };
     },
     pause() {},
   };
@@ -242,16 +285,17 @@ export async function resolveTodayScene(char: CharId, persona: PersonaId, pack: 
   return best ? { sceneId: best.id, title: best.title } : null;
 }
 
-export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: string; char: CharId; persona: PersonaId }): Promise<Engine> {
+export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: string; char: CharId; persona: PersonaId; retryOf?: string }): Promise<Engine> {
   let ses: PlaySession;
   try {
     let id = sceneId;
-    if (id === 'today') {
+    if (id === 'today' && !o.retryOf) {
       const t = await resolveTodayScene(o.char, o.persona, o.pack);
       if (!t) throw new SceneError('unavailable', '지금 할 수 있는 장면이 없어요.');
       id = t.sceneId;
     }
-    ses = await api.start(id, { personalityId: SERVER_PERSONA[o.persona], subtitleLanguage: o.lang });
+    // 다시 도전: 서버 retry 로 새 세션 (기존 결과는 그대로)
+    ses = o.retryOf ? await api.retry(o.retryOf) : await api.start(id, { personalityId: SERVER_PERSONA[o.persona], subtitleLanguage: o.lang });
   } catch (err) {
     throw wrapErr(err);
   }
@@ -351,6 +395,11 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       // 피드백을 닫은 다음 서버가 넘겨준 다음 대사를 보여 줘요
       wrong = 0;
       first = undefined;
+      // 최종 결과가 나왔으면 다음 대사를 시작하지 않아요
+      if (last?.result || pending?.status === 'succeeded' || pending?.status === 'failed') {
+        pending = null;
+        return;
+      }
       if (pending) {
         ses = pending;
         e.line = lineOf(ses);
@@ -378,6 +427,12 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
     },
     async final() {
       const r = last?.result ?? (await api.result(ses.id));
+      // 표정: ending.render → 마지막 turn.render → session.npc.render. 음성: 같은 턴이면 이미 받은 것 재사용
+      const endingOf = (x: ApiEnding) => {
+        const en = normEnding(x, img(last?.turn.render) ?? img(ses.npc.render));
+        if (en.dialogue && !en.dialogue.audio && last?.turn.audioUrl && (!en.dialogue.turnId || en.dialogue.turnId === last.turn.id)) en.dialogue.audio = absUrl(last.turn.audioUrl);
+        return en;
+      };
       const a = r.achievement ?? null;
       return {
         sessionId: ses.id,
@@ -392,7 +447,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         fixed: t.fixed.length ? t.fixed : (r.improvableUtterances ?? []).slice(0, 2).map((u) => ({ said: u.text, better: u.betterExpression })),
         coins: r.rewardCoins ?? 0,
         mistakes: t.mistakes,
-        ending: r.ending ? { kind: r.ending.kind, title: r.ending.title, text: r.ending.text } : null,
+        ending: r.ending ? endingOf(r.ending) : null,
         nextSceneId: r.nextSceneId ?? null,
       };
     },
@@ -404,7 +459,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
 }
 
 // 데모 모드는 사용자가 직접 켰을 때만. 서버 오류 때 자동으로 바꾸지 않아요.
-export async function createEngine(sceneId: string, o: { demo: boolean; pack: 'ko' | 'en'; lang: string; char: CharId; persona: PersonaId }): Promise<Engine> {
+export async function createEngine(sceneId: string, o: { demo: boolean; pack: 'ko' | 'en'; lang: string; char: CharId; persona: PersonaId; retryOf?: string }): Promise<Engine> {
   if (o.demo) {
     const local = sceneId === 'today' ? sceneForChar(o.char) : sceneById(sceneId);
     if (!local) throw new SceneError('not_found', '데모 대본에 없는 장면이에요.');

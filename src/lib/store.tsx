@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CharId, PersonaId } from './data';
+import type { Ending } from './engine';
 
 // 앱 상태. 기기에 저장해서 새로고침·재실행해도 이어져요 (웹은 localStorage, 앱은 AsyncStorage).
 // 서버에 연결되면 기록·코인은 서버 값(/home, /records, /wallet, /mistakes)이 우선이에요.
@@ -35,7 +36,7 @@ export type LastResult = {
   reach: number | null;
   infer: number | null;
   self: number | null;
-  ending: { kind: string; title: string; text: string } | null;
+  ending: Ending | null; // 마지막 반응 대사·표정·정리 카드 (예전 기록은 제목·문장만)
   nextSceneId: string | null;
   streakDays: number;
   newDay: boolean; // 오늘 처음 끝낸 장면이면 연속 출석이 하루 늘어요
