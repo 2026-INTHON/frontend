@@ -1,8 +1,9 @@
+import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, NotoSansKR_400Regular, NotoSansKR_500Medium, NotoSansKR_700Bold, NotoSansKR_900Black } from '@expo-google-fonts/noto-sans-kr';
 import { BlackHanSans_400Regular } from '@expo-google-fonts/black-han-sans';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider } from '../lib/store';
 import { C } from '../lib/theme';
@@ -19,11 +20,23 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StoreProvider>
         <StatusBar style="dark" />
+        <PhoneFrame>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, animation: 'slide_from_right' }}>
           <Stack.Screen name="scene/[id]" options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="result" options={{ animation: 'fade', gestureEnabled: false }} />
         </Stack>
+        </PhoneFrame>
       </StoreProvider>
     </SafeAreaProvider>
+  );
+}
+
+// 웹(PC)에서는 폰 크기로 가운데에 보여 줘요. 폰 브라우저에선 꽉 차게.
+function PhoneFrame({ children }: { children: React.ReactNode }) {
+  if (Platform.OS !== 'web') return <>{children}</>;
+  return (
+    <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#E9E7E1' }}>
+      <View style={{ flex: 1, width: '100%', maxWidth: 430, overflow: 'hidden', backgroundColor: C.bg, boxShadow: '0 0 40px rgba(0,0,0,0.08)' } as any}>{children}</View>
+    </View>
   );
 }

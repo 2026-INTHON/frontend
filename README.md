@@ -10,6 +10,18 @@ npx expo start --web    # 브라우저로 빠르게 보기
 ```
 폰과 컴퓨터가 같은 와이파이여야 해요. 회사·학교 와이파이에서 안 붙으면 `npx expo start --tunnel`.
 
+## 웹앱으로 쓰기
+```bash
+npm run web          # 개발용: 브라우저에서 바로 보기
+npm run build:web    # 배포용: dist/ 폴더에 웹 파일 생성
+npm run preview:web  # dist/ 를 로컬에서 미리 보기
+```
+- PC에서는 폰 크기(최대 430px)로 가운데에 보이고, 폰 브라우저에서는 꽉 차게 보여요.
+- 폰에서 "홈 화면에 추가"하면 앱처럼 전체 화면으로 열려요 (`public/manifest.json`).
+- **Vercel 배포**: 저장소를 Vercel에 연결하면 `vercel.json` 설정대로 빌드돼요(빌드 `npx expo export -p web`, 출력 `dist`). 새로고침해도 화면이 안 깨지게 모든 주소를 `index.html`로 보내요.
+- 웹에서 마이크는 **https 주소**에서만 켜져요(배포 주소나 localhost는 OK).
+- 백엔드 서버가 다른 주소라서, 백엔드에서 웹앱 주소를 CORS 허용해 줘야 서버 판정이 붙어요. 안 붙으면 앱 안 대본으로 돌아가요.
+
 ## 구조
 - `src/app/` 화면 (파일 = 화면)
   - `index` 웰컴 → `onboarding/pack` → `onboarding/lang`(모국어) → `onboarding/character` → `onboarding/persona` → `scene/[id]`(장면) → `result`

@@ -121,7 +121,7 @@ export function Sheet({ visible, onClose, children }: { visible: boolean; onClos
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={{ flex: 1, backgroundColor: C.dim }} onPress={onClose} />
-      <View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20 }}>
+      <View style={{ backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: ins.bottom + 20, width: '100%', maxWidth: 430, alignSelf: 'center' }}>
         <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: C.line, marginTop: -12, marginBottom: 16 }} />
         {children}
       </View>

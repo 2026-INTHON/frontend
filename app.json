@@ -30,7 +30,14 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Malo · 말로",
+      "shortName": "Malo",
+      "lang": "ko",
+      "themeColor": "#F3F2EE",
+      "backgroundColor": "#F3F2EE"
     },
     "plugins": [
       "expo-router",
