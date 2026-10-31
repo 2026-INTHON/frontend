@@ -5,9 +5,11 @@ import { api, ApiCharacter } from '../lib/api';
 import { CharId, PersonaId, SERVER_CHAR, SERVER_PERSONA, charById } from '../lib/data';
 import { C } from '../lib/theme';
 import { Btn, T, Tag } from './ui';
+import { useT } from '../lib/i18n';
 
 // Non-modal disclosure, confined to the character artwork. No nested scene-start button.
 export function CharacterProfileOverlay({ char, persona, open, onOpenChange }: { char: CharId; persona: PersonaId; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useT();
   const [catalog, setCatalog] = useState<ApiCharacter[] | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -28,36 +30,36 @@ export function CharacterProfileOverlay({ char, persona, open, onOpenChange }: {
   const character = catalog?.find(c => c.id === SERVER_CHAR[char]);
   const selected = character?.personalities?.find(p => p.id === SERVER_PERSONA[persona]);
   const profile = selected?.profile;
-  const name = character?.name ?? charById(char).name;
+  const name = t(character?.name ?? charById(char).name);
   const missing = !!catalog && !profile;
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       {open ? (
         <View style={styles.panel}>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: 68, gap: 16 }} accessibilityLabel={`${name} 프로필`}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: 68, gap: 16 }} accessibilityLabel={t('{name} 프로필', { name })}>
             <View style={{ gap: 8 }}>
-              <T s="h2">{name}의 프로필</T>
+              <T s="h2">{t('{name}의 프로필', { name })}</T>
               {selected ? <Tag label={selected.name} tone="lime" /> : null}
             </View>
             {error || missing ? (
               <View accessibilityLiveRegion="polite" style={{ gap: 12 }}>
-                <T s="body">{missing ? '아직 등록된 프로필이 없어요.' : '프로필을 불러오지 못했어요.'}</T>
-                <Btn small kind="line" label="다시 불러오기" onPress={() => { setError(false); setCatalog(null); setAttempt(n => n + 1); }} />
+                <T s="body">{missing ? t('아직 등록된 프로필이 없어요.') : t('프로필을 불러오지 못했어요.')}</T>
+                <Btn small kind="line" label={t('다시 불러오기')} onPress={() => { setError(false); setCatalog(null); setAttempt(n => n + 1); }} />
               </View>
             ) : !profile ? (
-              <View accessibilityLiveRegion="polite" style={{ gap: 12 }}><ActivityIndicator color={C.ink} /><T s="sub">프로필 불러오는 중…</T></View>
+              <View accessibilityLiveRegion="polite" style={{ gap: 12 }}><ActivityIndicator color={C.ink} /><T s="sub">{t('프로필 불러오는 중…')}</T></View>
             ) : (
               <>
                 <T s="body">{profile.introduction}</T>
-                <Detail label="나이 · 직업" text={`${profile.age} · ${profile.occupation}`} />
-                <Detail label="역할" text={profile.role} />
-                <Detail label="우리의 관계" text={profile.relationship} />
-                <Detail label="성격" text={profile.traits.join(' · ')} />
-                <Detail label="좋아하는 것" text={profile.likes.join('\n')} />
-                <Detail label="싫어하는 것" text={profile.dislikes.join('\n')} />
-                <Detail label="취미" text={profile.hobbies.join('\n')} />
-                <Detail label="소중하게 생각해요" text={profile.values.join(' · ')} />
-                <Detail label="이렇게 말해요" text={profile.speakingStyle} />
+                <Detail label={t('나이 · 직업')} text={`${profile.age} · ${profile.occupation}`} />
+                <Detail label={t('역할')} text={profile.role} />
+                <Detail label={t('우리의 관계')} text={profile.relationship} />
+                <Detail label={t('성격')} text={profile.traits.join(' · ')} />
+                <Detail label={t('좋아하는 것')} text={profile.likes.join('\n')} />
+                <Detail label={t('싫어하는 것')} text={profile.dislikes.join('\n')} />
+                <Detail label={t('취미')} text={profile.hobbies.join('\n')} />
+                <Detail label={t('소중하게 생각해요')} text={profile.values.join(' · ')} />
+                <Detail label={t('이렇게 말해요')} text={profile.speakingStyle} />
                 <View style={styles.quote}><T s="body">“{profile.sampleLines[0]}”</T></View>
               </>
             )}
@@ -65,7 +67,7 @@ export function CharacterProfileOverlay({ char, persona, open, onOpenChange }: {
         </View>
       ) : null}
       <Pressable
-        accessibilityRole="button" accessibilityLabel={open ? '프로필 닫기' : `${name} 프로필 보기`}
+        accessibilityRole="button" accessibilityLabel={open ? t('프로필 닫기') : t('{name} 프로필 보기', { name })}
         accessibilityState={{ expanded: open }}
         onPress={() => { setError(false); onOpenChange(!open); }} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
         onHoverIn={() => setHovered(true)} onHoverOut={() => setHovered(false)}

@@ -4,9 +4,11 @@ import { router } from 'expo-router';
 import { Btn, Chip, Screen, T, Tag, TopBar } from '../components/ui';
 import { C, F } from '../lib/theme';
 import { useStore } from '../lib/store';
+import { useT } from '../lib/i18n';
 
 // 13 페르소나 만들기 (구독 주 1회 · 무료는 생성권)
 export default function PersonaCreate() {
+  const t = useT();
   const { subscribed } = useStore();
   const [rel, setRel] = useState('직장 상사');
   const [lv, setLv] = useState('보통');
@@ -14,28 +16,28 @@ export default function PersonaCreate() {
   const [name, setName] = useState('우리 팀 최 팀장님');
   return (
     <Screen>
-      <TopBar title="나만의 캐릭터" right={<Tag label={subscribed ? '이번 주 1회 남음' : '생성권 0장'} tone="lime" />} />
+      <TopBar title={t('나만의 캐릭터')} right={<Tag label={subscribed ? t('이번 주 1회 남음') : t('생성권 0장')} tone="lime" />} />
       <ScrollView contentContainerStyle={{ padding: 24, gap: 10 }}>
-        <T s="label">어떤 관계예요?</T>
+        <T s="label">{t('어떤 관계예요?')}</T>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           {['직장 상사', '교수님', '친구', '연인'].map((x) => (
-            <Chip key={x} label={x} on={rel === x} onPress={() => setRel(x)} />
+            <Chip key={x} label={t(x)} on={rel === x} onPress={() => setRel(x)} />
           ))}
         </View>
-        <T s="label" style={{ marginTop: 10 }}>성격 · 말투</T>
+        <T s="label" style={{ marginTop: 10 }}>{t('성격 · 말투')}</T>
         <TextInput value={desc} onChangeText={setDesc} multiline style={inp} />
-        <T s="label" style={{ marginTop: 10 }}>부르는 이름</T>
+        <T s="label" style={{ marginTop: 10 }}>{t('부르는 이름')}</T>
         <TextInput value={name} onChangeText={setName} style={inp} />
-        <T s="label" style={{ marginTop: 10 }}>난이도</T>
+        <T s="label" style={{ marginTop: 10 }}>{t('난이도')}</T>
         <View style={{ flexDirection: 'row', backgroundColor: C.white, borderRadius: 16, padding: 4 }}>
           {['쉬움', '보통', '어려움'].map((x) => (
-            <Chip key={x} label={x} on={lv === x} onPress={() => setLv(x)} style={{ flex: 1, alignItems: 'center', borderWidth: 0 }} />
+            <Chip key={x} label={t(x)} on={lv === x} onPress={() => setLv(x)} style={{ flex: 1, alignItems: 'center', borderWidth: 0 }} />
           ))}
         </View>
-        <T s="small" style={{ marginTop: 14 }}>✦ 구독하면 주 1회 무료, 아니면 생성권 1장으로 만들어요</T>
+        <T s="small" style={{ marginTop: 14 }}>{t('✦ 구독하면 주 1회 무료, 아니면 생성권 1장으로 만들어요')}</T>
       </ScrollView>
       <View style={{ paddingHorizontal: 16 }}>
-        <Btn label="캐릭터 만들기" icon="star" onPress={() => router.back()} />
+        <Btn label={t('캐릭터 만들기')} icon="star" onPress={() => router.back()} />
       </View>
     </Screen>
   );

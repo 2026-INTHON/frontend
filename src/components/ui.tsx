@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, F, R } from '../lib/theme';
 import { useStore } from '../lib/store';
+import { useT } from '../lib/i18n';
 
 export function T({ children, s, style, ...rest }: { children: React.ReactNode; s?: keyof typeof ts; style?: TextStyle | TextStyle[]; numberOfLines?: number }) {
   return (
@@ -70,8 +71,9 @@ export function Screen({ children, bg = C.bg, style, pad = true }: { children: R
 }
 
 export function IconBtn({ name, onPress, bg = C.white, color = C.ink, size = 40, label }: { name: keyof typeof Feather.glyphMap; onPress?: () => void; bg?: string; color?: string; size?: number; label?: string }) {
+  const t = useT();
   return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={label ?? ICON_LABEL[name] ?? name} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={label ?? (ICON_LABEL[name] ? t(ICON_LABEL[name]!) : name)} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
       <Feather name={name} size={size * 0.45} color={color} />
     </Pressable>
   );
@@ -151,8 +153,9 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export const FRAME = { flex: 1, width: '100%' as const, maxWidth: 430, alignSelf: 'center' as const, overflow: 'hidden' as const };
 
 export function Hearts({ n, max = 3 }: { n: number; max?: number }) {
+  const t = useT();
   return (
-    <View accessible accessibilityLabel={`체력 ${n}/${max}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
+    <View accessible accessibilityLabel={t('체력 {n}/{max}', { n, max })} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 8 }}>
       {Array.from({ length: max }).map((_, i) => (
         <Ionicons key={i} name="heart" size={15} color={i < n ? C.ink : C.line} />
       ))}

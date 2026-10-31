@@ -37,6 +37,7 @@ export type LastResult = {
   reach: number | null;
   infer: number | null;
   self: number | null;
+  review?: { said: string; better: string; why: string }[]; // 이번 장면에서 아쉬웠던 답 + 예시 답변 (결과 화면에서 정리)
   ending: Ending | null; // 마지막 반응 대사·표정·정리 카드 (예전 기록은 제목·문장만)
   nextSceneId: string | null;
   streakDays: number;

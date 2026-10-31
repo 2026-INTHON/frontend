@@ -64,6 +64,7 @@ export default function SceneScreen() {
   const holdAt = useRef(0);
   const sending = useRef(false);
   const finishing = useRef(false);
+  const review = useRef<{ said: string; better: string; why: string }[]>([]); // 결과 화면 '복습할 표현'
   // 웹 + 서버 모드면 녹음 중 전사, 안 되면 파일 녹음 후 전사
   const rt = useRef<RealtimeTranscriber | null>(null);
   const recMode = useRef<'rt' | 'file'>('file');
@@ -99,6 +100,7 @@ export default function SceneScreen() {
     setDetail(false);
     setLog([]);
     finishing.current = false;
+    review.current.length = 0;
     eng.current = null;
     createEngine(sceneId, { demo: st.demo, pack: st.pack, lang: st.lang, char: st.char, persona: st.persona, retryOf: retryOf ? String(retryOf) : undefined })
       .then((e) => {
@@ -207,7 +209,7 @@ export default function SceneScreen() {
   // ----- 말하기 -----
   async function micDown() {
     if (phase === 'listening') return micStop();
-    holdAt.current = Date.now();
+    holdAt.current = now();
     stopPlay();
     haptic.tap();
     setNotice(null);
@@ -237,7 +239,7 @@ export default function SceneScreen() {
   }
   function micUp() {
     // 길게 눌렀다 떼면 끝, 짧게 탭했으면 다시 탭할 때 끝
-    if (Date.now() - holdAt.current > 450) micStop();
+    if (now() - holdAt.current > 450) micStop();
   }
   async function micStop() {
     if (recMode.current === 'rt') {
@@ -308,8 +310,9 @@ export default function SceneScreen() {
     if (o.ok) haptic.good();
     else {
       haptic.bad();
+      if (o.better && !o.native) review.current.push({ said: ans, better: o.better, why: o.why });
       if (o.mark === 'X' && !o.native) {
-        st.addMistake({ id: `${e.sceneId}-${Date.now()}`, scene: e.sceneId, title: e.title, who: `${t(ch.name)} · ${t(persona.name)}`, when: t('오늘'), said: ans, better: o.better, why: o.why, fixed: false, line: said });
+        st.addMistake({ id: `${e.sceneId}-${now()}`, scene: e.sceneId, title: e.title, who: `${t(ch.name)} · ${t(persona.name)}`, when: t('오늘'), said: ans, better: o.better, why: o.why, fixed: false, line: said });
       }
     }
     // 장면 끝 (서버가 세션을 끝낸 경우 포함): 마지막 반응 + '결과 보기'
@@ -387,7 +390,7 @@ export default function SceneScreen() {
       f = { sessionId: null, passed: null, grade: null, score: null, best: '', worst: '', coins: 0, mistakes: 0, fixed: [], reach: null, infer: null, self: null, ending: null, nextSceneId: null };
     }
     // 오늘 첫 장면이면 연속 출석 +1, 보상 코인도 여기서 한 번만
-    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: scene.title || e.title, goal: scene.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId });
+    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: (lang !== 'ko' && e.brief.translation?.title) || e.title, goal: (lang !== 'ko' && e.brief.translation?.goal) || e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId, review: review.current.slice(-3) });
     router.replace('/result');
   }
 
@@ -788,6 +791,9 @@ export default function SceneScreen() {
     </ImageBackground>
   );
 }
+
+// 이벤트 처리에서만 쓰는 현재 시각
+const now = () => Date.now();
 
 const absFill = { position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 };
 
