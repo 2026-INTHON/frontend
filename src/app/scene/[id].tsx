@@ -380,7 +380,12 @@ export default function SceneScreen() {
       {/* 캐릭터: 서버가 고른 표정 이미지가 있으면 그걸로 */}
       {/* 서버 표정 이미지는 흰 배경이 있어서, 배경 없는 앱 안 캐릭터 PNG를 써요 */}
       <Image source={IMG.char[charId]} style={{ position: 'absolute', top: ins.top + 64, alignSelf: 'center', width: '62%', height: '72%' }} resizeMode="contain" accessibilityLabel={`${ch.name} 캐릭터`} />
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '42%', backgroundColor: 'rgba(243,242,238,0.72)' }} />
+      {/* 아래로 갈수록 점점 흐려지는 그라데이션 (경계선 없이) */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}>
+        {FADE.map((a, i) => (
+          <View key={i} style={{ flex: 1, backgroundColor: `rgba(243,242,238,${a})` }} />
+        ))}
+      </View>
 
       {/* 상단 단축바 */}
       <View style={{ position: 'absolute', top: ins.top + 8, left: 16, right: 16, flexDirection: 'row', alignItems: 'center' }}>
@@ -803,3 +808,6 @@ function Brief({ k, v, sub }: { k: string; v: string; sub?: string }) {
 }
 
 const josa = (w: string) => ((w.charCodeAt(w.length - 1) - 0xac00) % 28 ? '이' : '가');
+
+// 0 → 0.85 로 부드럽게 (위는 투명, 맨 아래는 거의 불투명)
+const FADE = Array.from({ length: 32 }, (_, i) => +(0.85 * Math.pow((i + 1) / 32, 1.6)).toFixed(3));
