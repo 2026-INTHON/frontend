@@ -223,7 +223,7 @@ export const authApi = {
 export type ReportDetail = {
   turnId: string; nodeId?: string; attempt?: number; npcText?: string; learnerText?: string; native?: boolean;
   evaluation?: Evaluation | null; originalIntent?: string | null; implicitIntent?: string | null; culturalContext?: string | null;
-  feedback?: string | null; feedbackTranslation?: string | null; praise?: string | null; alternativeExpression?: string | null; practiceTip?: string | null;
+  feedback?: string | null; feedbackTranslation?: {language:string;text:string} | string | null; praise?: string | null; alternativeExpression?: string | null; practiceTip?: string | null;
   comparison?: { firstAnswer: string; currentAnswer: string } | null;
 };
 export type SessionReport = {
@@ -231,7 +231,7 @@ export type SessionReport = {
   status: 'queued' | 'running' | 'ready' | 'failed';
   error: { code: string; message: string; retryable: boolean } | null;
   report: null | {
-    id: string; title?: string; provisional?: boolean;
+    id: string; title?: string; provisional?: boolean; language?: string;
     summary?: { headline?: string; overallFeedback?: string; strengths?: string[]; improvements?: string[]; culturalTakeaways?: string[]; nextPractice?: string | string[] };
     details?: ReportDetail[];
   };

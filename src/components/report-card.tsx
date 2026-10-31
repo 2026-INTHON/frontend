@@ -5,6 +5,8 @@ import { api, ApiError, SessionReport } from '../lib/api';
 import { C } from '../lib/theme';
 import { Btn, Card, T } from './ui';
 import { ReactionBadge } from './scene-parts';
+import { useStore } from '../lib/store';
+import { subtitleText } from '../lib/learning-copy';
 
 // 화면이 보이는지 (웹: 탭 숨김, 앱: 백그라운드) — 숨겨지면 조회를 멈춰요
 function useVisible() {
@@ -23,6 +25,7 @@ function useVisible() {
 
 // 완료 보고서: 결과 화면을 막지 않고 아래에서 따로 준비돼요 (FE_INTEGRATION 「완료 보고서와 자세히 보기」)
 export function ReportCard({ sessionId }: { sessionId: string }) {
+  const { lang } = useStore();
   const visible = useVisible();
   const [rep, setRep] = useState<SessionReport | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -119,7 +122,7 @@ export function ReportCard({ sessionId }: { sessionId: string }) {
               {d.implicitIntent ? <T s="small">상대의 속뜻: {d.implicitIntent}</T> : null}
               {d.culturalContext ? <T s="small">문화 맥락: {d.culturalContext}</T> : null}
               {d.feedback ? <T s="sub">{d.feedback}</T> : null}
-              {d.feedbackTranslation ? <T s="small">{d.feedbackTranslation}</T> : null}
+              {d.feedbackTranslation ? <T s="small">{typeof d.feedbackTranslation === 'string' ? (r.language === lang ? d.feedbackTranslation : null) : subtitleText(d.feedbackTranslation, lang)}</T> : null}
               {d.alternativeExpression ? (
                 <View style={{ borderLeftWidth: 3, borderLeftColor: C.lime, paddingLeft: 8 }}>
                   <T s="small">이렇게도 말해요</T>
