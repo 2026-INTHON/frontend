@@ -158,6 +158,7 @@ FE는 감정이나 키 문자열로 URL을 조립하지 않고 `ending.render.im
 # 2026-11-01 캐릭터별 프로필과 카드 뒤집기
 
 - PR #23은 main `9b2de694`에 포함되었고 11월 1일 04:38 KST에 배포되었다. develop의 CI는 검사만 실행하며 실제 배포는 검증된 main 릴리스를 따른다.
+- 홈은 제공된 화면처럼 배경·캐릭터 위에 흰 정보 카드가 겹치는 배치로 맞췄다. 검은 상태 태그 → 장면 제목 → 캐릭터·성격·실제 상태 → 진행 막대 순서다. 막대는 저장된 대화 위치로 계산하며 완료한 장면은 100%, 새 다음 장면은 0%다. 하단 두 바로가기와 시작 버튼을 유지하고 작은 화면에서는 스크롤할 수 있다.
 - 홈 캐릭터 영역 우측 상단 44px 원형 버튼으로 프로필을 열고 닫는다. 흰색 반투명 패널 안에서 스크롤하며, 뒤쪽 캐릭터의 장면 시작 동작은 잠긴다. 하단 장면 카드와 탐색은 유지한다. 웹 Escape로 닫을 수 있다.
 - `GET /api/v1/characters` → 선택 캐릭터의 `personalities[]`에서 선택한 유형의 `profile`을 표시한다. FE `seoyun/prof/junho/boss`와 `tease/picky/calm`은 기존 SERVER_CHAR / SERVER_PERSONA 매핑을 사용한다.
 - 공개 필드: `age`, `role`, `occupation`, `introduction`, `relationship`, `traits`, `likes`, `dislikes`, `hobbies`, `values`, `speakingStyle`, `sampleLines`. `profileRevision`으로 설정 버전을 확인한다.
