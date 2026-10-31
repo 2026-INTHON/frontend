@@ -151,7 +151,11 @@ async function call<T>(path: string, init: RequestInit = {}, auth = true, timeou
     return await raw<T>(path, init, tk.accessToken, timeoutMs);
   } catch (e) {
     if (!(e instanceof ApiError) || e.status !== 401) throw e;
-    let next = await refresh().catch(() => null);
+    const current = await getTokens();
+    let next = current && current.accessToken !== tk.accessToken ? current : await refresh().catch(error => {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error; // A temporary network/server error must not erase a real login.
+    });
     if (!next) {
       await setTokens(null);
       if (!tk.user?.isGuest) {
@@ -169,7 +173,11 @@ export const setSignedOutHandler = (f: (() => void) | null) => (onSignedOut = f)
 
 type AuthRes = { accessToken: string; refreshToken?: string; expiresIn?: number; user?: MaloUser; migrated?: unknown };
 
-export async function guest(name = '게스트'): Promise<Tokens> {
+let guestPending: Promise<Tokens> | null = null;
+export function guest(name = '게스트'): Promise<Tokens> {
+  return guestPending ??= createGuest(name).finally(() => { guestPending = null; });
+}
+async function createGuest(name: string): Promise<Tokens> {
   const s = await raw<AuthRes>('/auth/guest', { method: 'POST', body: JSON.stringify({ displayName: name }) }, null);
   const t = { accessToken: s.accessToken, refreshToken: s.refreshToken, user: s.user ? { ...s.user, isGuest: true } : { id: 'guest', isGuest: true } };
   await setTokens(t);
@@ -177,7 +185,11 @@ export async function guest(name = '게스트'): Promise<Tokens> {
 }
 
 // refresh token 은 회전돼요 → 응답 토큰으로 함께 교체
-export async function refresh(): Promise<Tokens | null> {
+let refreshPending: Promise<Tokens | null> | null = null;
+export function refresh(): Promise<Tokens | null> {
+  return refreshPending ??= refreshTokens().finally(() => { refreshPending = null; });
+}
+async function refreshTokens(): Promise<Tokens | null> {
   const tk = await getTokens();
   if (!tk?.refreshToken) return null;
   const s = await raw<AuthRes>('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: tk.refreshToken }) }, null);
@@ -224,6 +236,13 @@ export type GenerationJob = {
 
 const qs = (q: Record<string, string | undefined>) => new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]).toString();
 const isNetErr = (e: unknown) => !(e instanceof ApiError) || e.status >= 500;
+const starting = new Map<string, Promise<PlaySession>>();
+async function startSession(sceneId: string, o: { personalityId?: string; subtitleLanguage?: string }) {
+  const tk = await getTokens() ?? await guest();
+  const key = JSON.stringify([tk.accessToken, sceneId, o]);
+  if (!starting.has(key)) starting.set(key, call<PlaySession>('/sessions', { method: 'POST', body: JSON.stringify({ sceneId, aiMode: 'live', ...o }) }, true, 120000).finally(() => starting.delete(key)));
+  return starting.get(key)!;
+}
 
 export const api = {
   get: <T>(path: string) => call<T>(path, {}, true, 10000),
@@ -232,7 +251,7 @@ export const api = {
   characters: () => call<ApiCharacter[]>('/characters', {}, false, 10000),
   chapters: (q: { pack: string; characterId: string }) => call<ApiChapter[]>('/chapters?' + qs(q), {}, true, 15000),
   // aiMode 를 빼면 옛 예시는 mock 채점이라 꼭 live 로 보내요
-  start: (sceneId: string, o: { personalityId?: string; subtitleLanguage?: string }) => call<PlaySession>('/sessions', { method: 'POST', body: JSON.stringify({ sceneId, aiMode: 'live', ...o }) }, true, 30000),
+  start: startSession,
   // AI 응답은 5초를 넘을 수 있어요. 네트워크 오류는 같은 clientTurnId 로 두 번까지 다시 보내요.
   turn: async (id: string, b: { clientTurnId: string; inputType: 'text' | 'voice'; text: string; transcriptId?: string; realtime?: boolean }) => {
     let last: unknown;
