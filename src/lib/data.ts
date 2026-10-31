@@ -59,7 +59,8 @@ export const PERSONAS: Record<CharId, Persona[]> = {
 
 // ---- 장면 스크립트 (AI 연결 전 고정 데이터) ----
 export type Cue = { k: '표정' | '억양' | '망설임' | '침묵' | '행동'; v: string };
-export type Line = { line: string; action?: string; cues?: Cue[] };
+// sub: 선택 언어 자막, audio: 서버가 준 그 대사 음성 URL, turnId: 반응 대사면 해당 턴 (다시 듣기용)
+export type Line = { line: string; action?: string; cues?: Cue[]; sub?: string | null; audio?: string | null; turnId?: string };
 export type Turn = Line & {
   byPersona?: Partial<Record<PersonaId, Line>>; // 성격마다 다른 말투·단서
   clue: { focus: string; act: string; ctx: string }; // 힌트 1단계: 주목 표현 · 행동 · 상황 단서

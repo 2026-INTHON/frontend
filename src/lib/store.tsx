@@ -21,6 +21,7 @@ export type LastPlayed = {
 
 // 결과 화면에 보여 줄 마지막 결과
 export type LastResult = {
+  sessionId?: string | null; // 서버 세션 (상세 보고서 조회)
   sceneId: string;
   title: string;
   goal: string;
@@ -58,6 +59,7 @@ type State = {
   history: DayRecord[]; // 끝낸 장면 기록 (내 기록 화면)
   studyDays: string[]; // 장면을 끝낸 날짜(YYYY-MM-DD)
   demo: boolean; // 사용자가 직접 켠 데모 모드: 앱 안 대본·예시 기록 사용
+  serverStreak?: number | null; // 서버 /home 의 연속 출석 (있으면 이 값)
 };
 
 const initial: State = {
@@ -157,7 +159,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...s,
       hydrated,
-      streak: streakOf(s.studyDays),
+      streak: !s.demo && s.serverStreak != null ? s.serverStreak : streakOf(s.studyDays),
       set: (p) => setS((o) => ({ ...o, ...p })),
       addCoins: (n) => setS((o) => ({ ...o, coins: Math.max(0, o.coins + n) })),
       addMistake: (m) => setS((o) => ({ ...o, mistakes: [m, ...o.mistakes.filter((x) => x.id !== m.id)] })),

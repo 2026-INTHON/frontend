@@ -17,6 +17,7 @@ export type Out = {
   native: boolean; // 모국어로 답함 → 한국어 표현 보여 주고 다시
   voice: boolean; // 음성으로 답했는지 (텍스트면 속도·망설임·말끝을 안 보여 줘요)
   reply: string;
+  replyLine: Line; // 반응 대사 (자막·음성 포함)
   render: string | null; // 반응 표정 이미지 URL
   lifeDelta: number;
   tone: string | null;
@@ -35,6 +36,7 @@ export type Out = {
   failed: boolean;
 };
 export type Final = {
+  sessionId: string | null; // 서버 세션 (상세 보고서용)
   passed: boolean | null;
   grade: string | null;
   score: number | null;
@@ -73,7 +75,7 @@ export interface Engine {
   skip(): boolean; // 데모 모드에서만: △ 그대로 진행 / 정답 보고 넘어가기 (true 면 장면 끝)
   canSkip: boolean;
   transcribe(uri: string | null): Promise<{ text: string; transcriptId?: string }>;
-  voiceUrl(): Promise<string | null>;
+  voiceUrl(l?: Line): Promise<string | null>; // 대사 음성 (반응이면 그 턴, 아니면 지금 노드)
   final(): Promise<Final>;
   pause(): void;
 }
@@ -165,13 +167,15 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
         }
       }
       const mark: Mark = v.native ? '?' : v.mark;
+      const reply = v.native ? '…응? 한국어로 다시 말해 줄래?' : v.mark === 'O' ? turn.goodReply : v.mark === '△' ? turn.midReply : turn.badReply;
       return {
         mark,
         label: v.native ? '모국어로 답했어요' : MARK_LABEL[mark],
         ok: v.ok,
         native: v.native,
         voice: !!voice,
-        reply: v.native ? '…응? 한국어로 다시 말해 줄래?' : v.mark === 'O' ? turn.goodReply : v.mark === '△' ? turn.midReply : turn.badReply,
+        reply,
+        replyLine: { line: reply },
         render: null,
         lifeDelta: v.mark === 'X' && !v.native ? -1 : 0,
         tone: v.tone,
@@ -210,7 +214,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
     },
     async final() {
       const s = scoreOf(st);
-      return { passed: true, grade: gradeOf(s.score), score: Math.round(s.score), best: st.best, worst: st.worst, coins: 30, mistakes: st.mistakes, fixed: st.fixed, reach: s.reach, infer: s.infer, self: s.self, ending: null, nextSceneId: null };
+      return { sessionId: null, passed: true, grade: gradeOf(s.score), score: Math.round(s.score), best: st.best, worst: st.worst, coins: 30, mistakes: st.mistakes, fixed: st.fixed, reach: s.reach, infer: s.infer, self: s.self, ending: null, nextSceneId: null };
     },
     pause() {},
   };
@@ -232,8 +236,10 @@ export async function resolveTodayScene(char: CharId, persona: PersonaId, pack: 
   const pick = subs.find((s) => ok(s) && s.state === 'now') ?? subs.find((s) => ok(s) && s.state === 'open') ?? subs.find(ok);
   if (pick?.sceneId) return { sceneId: pick.sceneId, title: pick.title };
   // 챕터가 비어 있으면 공개 장면 목록에서 같은 캐릭터·성격
-  const list = await api.scenes({ pack, characterId: SERVER_CHAR[char], personalityId: SERVER_PERSONA[persona] });
-  return list[0] ? { sceneId: list[0].id, title: list[0].title } : null;
+  // 짧은 예시보다 8회 교육과정(gf-1-1, prof-1-1 등)을 먼저
+  const list = await api.scenes({ pack, characterId: SERVER_CHAR[char] });
+  const best = list.find((x) => x.source === 'curriculum') ?? list.find((x) => x.personalityId === SERVER_PERSONA[persona]) ?? list[0];
+  return best ? { sceneId: best.id, title: best.title } : null;
 }
 
 export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: string; char: CharId; persona: PersonaId }): Promise<Engine> {
@@ -245,7 +251,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       if (!t) throw new SceneError('unavailable', '지금 할 수 있는 장면이 없어요.');
       id = t.sceneId;
     }
-    ses = await api.start(id, o.lang);
+    ses = await api.start(id, { personalityId: SERVER_PERSONA[o.persona], subtitleLanguage: o.lang });
   } catch (err) {
     throw wrapErr(err);
   }
@@ -256,7 +262,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
   let clientTurn: { id: string; text: string } | null = null;
   const t = { mistakes: 0, best: '', worst: '', fixed: [] as { said: string; better: string }[] };
   const char = charFromServer(ses.characterId, o.char);
-  const lineOf = (s: PlaySession): Line => ({ line: s.npc.text, action: s.npc.action ?? undefined, cues: normCues(s.npc.cues) as Cue[] });
+  const lineOf = (s: PlaySession): Line => ({ line: s.npc.text, action: s.npc.action ?? undefined, cues: normCues(s.npc.cues) as Cue[], sub: s.npc.subtitle?.text ?? null, audio: s.npc.audioUrl ? absUrl(s.npc.audioUrl) : null });
 
   const e: Engine = {
     mode: 'live',
@@ -320,6 +326,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         native,
         voice: isVoice,
         reply: r.turn.npcReply,
+        replyLine: { line: r.turn.npcReply, sub: r.turn.npcReplySubtitle?.text ?? null, audio: r.turn.audioUrl ? absUrl(r.turn.audioUrl) : null, turnId: r.turn.id },
         render: img(r.turn.render),
         lifeDelta: r.turn.lifeDelta ?? 0,
         tone: f.tone?.label ?? null,
@@ -359,9 +366,10 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       if (!d.text?.trim()) throw new SceneError('unavailable', '말소리를 듣지 못했어요.');
       return { text: d.text, transcriptId: d.transcriptId };
     },
-    async voiceUrl() {
+    async voiceUrl(l) {
+      // 다시 듣기·만료 시 재발급. 반응 대사는 그 턴의 음성만 (다음 노드 음성이 섞이지 않게)
       try {
-        const a = await api.speech(ses.id);
+        const a = await api.speech(ses.id, l?.turnId);
         return absUrl(a.audioUrl);
       } catch {
         return null;
@@ -371,6 +379,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
       const r = last?.result ?? (await api.result(ses.id));
       const a = r.achievement ?? null;
       return {
+        sessionId: ses.id,
         passed: r.passed,
         grade: r.grade ?? (r.score != null ? gradeOf(r.score) : null),
         score: r.score ?? null,

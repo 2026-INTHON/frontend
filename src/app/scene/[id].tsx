@@ -116,15 +116,22 @@ export default function SceneScreen() {
     setLineMark(null);
     setRender(eng.current?.render ?? null);
     setLog((g) => [...g, { who: 'char', text: l.line }]);
-    play(l.line);
+    play(l);
   }
 
-  async function play(l: string) {
+  // 서버 음성: 대사에 같이 온 audioUrl 우선, 없으면 다시 발급 (반응은 그 턴 음성만). 데모 모드는 기기 TTS.
+  async function play(ln: Line, refetch = false) {
+    const l = ln.line;
     stopSpeak();
     player.current?.remove();
     player.current = null;
     setPlaying(true);
-    const url = eng.current?.mode === 'live' ? await eng.current.voiceUrl() : null;
+    const live = eng.current?.mode === 'live';
+    const url = live ? (!refetch && ln.audio ? ln.audio : await eng.current!.voiceUrl(ln)) : null;
+    if (live && !url) {
+      setPlaying(false); // 음성이 없으면 대사는 그대로 두고 다시 듣기 제공
+      return;
+    }
     if (url) {
       try {
         const pl = createAudioPlayer({ uri: url });
@@ -203,8 +210,9 @@ export default function SceneScreen() {
     setHearts(eng.current!.lives);
     setLog((g) => [...g, { who: 'me', text: ans }, { who: 'char', text: o.reply, mark: o.mark }]);
     // F안: 캐릭터 반응 말풍선 + 모서리 배지를 먼저 보여 주고, 잠시 뒤 이유 시트
-    setLine({ line: o.reply });
+    setLine(o.replyLine);
     setLineMark(o.mark);
+    play(o.replyLine);
     if (o.render) setRender(o.render);
     setPhase('reaction');
     if (o.ok) haptic.good();
@@ -293,10 +301,10 @@ export default function SceneScreen() {
       f = await e.final();
     } catch {
       // 결과를 못 받아도 점수를 지어내지 않아요
-      f = { passed: null, grade: null, score: null, best: '', worst: '', coins: 0, mistakes: 0, fixed: [], reach: null, infer: null, self: null, ending: null, nextSceneId: null };
+      f = { sessionId: null, passed: null, grade: null, score: null, best: '', worst: '', coins: 0, mistakes: 0, fixed: [], reach: null, infer: null, self: null, ending: null, nextSceneId: null };
     }
     // 오늘 첫 장면이면 연속 출석 +1, 보상 코인도 여기서 한 번만
-    st.completeScene({ sceneId: e.sceneId, title: e.title, goal: e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId });
+    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: e.title, goal: e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId });
     router.replace('/result');
   }
 
@@ -352,7 +360,8 @@ export default function SceneScreen() {
               action={lineMark ? undefined : line.action}
               cues={lineMark ? undefined : line.cues}
               playing={playing}
-              onPlay={() => (playing ? stopPlay() : play(line.line))}
+              sub={line.sub}
+              onPlay={() => (playing ? stopPlay() : play(line, true))}
               mark={lineMark}
               onMarkPress={phase === 'reaction' ? openReason : undefined}
             />

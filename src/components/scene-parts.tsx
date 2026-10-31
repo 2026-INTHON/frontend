@@ -96,7 +96,7 @@ export function ReactionBadge({ mark, size = 34, onPress }: { mark: MarkKind; si
 }
 export const markName = (m: MarkKind) => MARK_NAME[m];
 
-export function LineCard({ name, line, action, cues, playing, onPlay, sec = 3, mark, onMarkPress }: { name: string; line: string; action?: string; cues?: { k: string; v: string }[]; playing?: boolean; onPlay?: () => void; sec?: number; mark?: MarkKind | null; onMarkPress?: () => void }) {
+export function LineCard({ name, line, sub, action, cues, playing, onPlay, sec = 3, mark, onMarkPress }: { name: string; line: string; sub?: string | null; action?: string; cues?: { k: string; v: string }[]; playing?: boolean; onPlay?: () => void; sec?: number; mark?: MarkKind | null; onMarkPress?: () => void }) {
   return (
     <View>
       {/* 반응 배지: 말풍선 오른쪽 위 모서리 */}
@@ -110,6 +110,8 @@ export function LineCard({ name, line, action, cues, playing, onPlay, sec = 3, m
       </View>
       <View style={{ backgroundColor: C.white, borderRadius: 20, borderWidth: 2, borderColor: C.ink, padding: 20, paddingTop: 22 }}>
         <T s="h2" style={{ fontSize: 19 }}>{line}</T>
+        {/* 선택 언어 자막 */}
+        {sub ? <T s="sub" style={{ marginTop: 4, color: C.ink }}>{sub}</T> : null}
         {action ? <T s="sub" style={{ marginTop: 6 }}>{action}</T> : null}
         <Cues cues={cues} />
         {onPlay ? (

@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Btn, Card, Coin, Screen, T, Tag } from '../components/ui';
 import { C, F } from '../lib/theme';
 import { useStore } from '../lib/store';
+import { ReportCard } from '../components/report-card';
 
 // 15 결과: 방금 끝낸 장면의 결과 (저장돼 있어서 새로고침해도 그대로)
 export default function Result() {
@@ -94,6 +95,8 @@ export default function Result() {
             <T s="small" style={{ marginTop: 8 }}>오답 도감에 저장했어요 · 보러 가기</T>
           </Card>
         ) : null}
+        {/* 서버 상세 보고서 (데모 모드엔 없음) */}
+        {r.sessionId && !st.demo ? <ReportCard sessionId={r.sessionId} /> : null}
         {st.coins >= 150 ? <Btn label="코인으로 꾸미러 가기" kind="line" icon="shopping-bag" onPress={() => router.push('/dress')} /> : null}
       </ScrollView>
       <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16 }}>
