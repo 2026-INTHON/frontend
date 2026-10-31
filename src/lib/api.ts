@@ -23,6 +23,7 @@ export type Briefing = {
 };
 
 export type PlaySession = {
+  repair?: { kind: 'apology' | 'clarification'; issue: string; triggerText: string; resumeNpcText: string } | null;
   id: string;
   sceneId: string;
   characterId: string;
@@ -61,6 +62,7 @@ export type TurnFeedback = {
   views?: { who: string; meaning: string; cue?: string }[];
 };
 export type ApiTurn = {
+  repairAction?: 'none' | 'request_apology' | 'request_clarification' | 'continue' | 'resolved';
   id: string;
   nodeId?: string;
   attempt?: number;
