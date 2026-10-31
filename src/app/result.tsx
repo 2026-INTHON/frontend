@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Btn, Card, Coin, Screen, T } from '../components/ui';
 import { C } from '../lib/theme';
 import { TurnRec, useStore } from '../lib/store';
-import { charById, IMG } from '../lib/data';
+import { charById } from '../lib/data';
 import { speak, stopSpeak } from '../lib/voice';
 import { ReactionBadge } from '../components/scene-parts';
 import type { Emotion } from '../lib/api';
 import { ReportCard } from '../components/report-card';
+import { ExportCard } from '../components/export-card';
 import { EndingDialogue, RecapCard } from '../components/ending-story';
 import { api, ApiError } from '../lib/api';
 import { Ending, normEnding } from '../lib/engine';
@@ -64,18 +65,10 @@ export default function Result() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
-        {/* 1) 결과 한 줄: 작은 썸네일 + 엔딩 이름 + 마지막 한마디 */}
-        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#EFEDE7', overflow: 'hidden' }}>
-            <Image source={IMG.char[char]} style={{ width: 90, height: 180, marginLeft: -17, marginTop: 2 }} resizeMode="contain" accessibilityLabel={name} />
-          </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <T s="small">{r.title || t('장면 완료')}</T>
-            <T s="h3">{ending?.title || t('장면 완료')}</T>
-            {ending?.dialogue?.text ? <T s="body" numberOfLines={2}>{name}: "{ending.dialogue.text}"</T> : null}
-            {ending?.dialogue?.sub ? <T s="small" numberOfLines={2}>{ending.dialogue.sub}</T> : null}
-          </View>
-        </Card>
+        {/* Keep the deployed full character / final dialogue, with PR #49's report below. */}
+        <T s="small">{r.title || t('장면 완료')}</T>
+        {ending?<EndingDialogue ending={ending} char={char} sessionId={live?r.sessionId:null} pack={st.pack}/>:null}
+        {ending?<RecapCard ending={ending}/>:null}
 
         {/* 2) 분위기가 바뀐 순간 */}
         {key ? (
@@ -183,6 +176,7 @@ export default function Result() {
           </Card>
         ) : null}
 
+        {live&&r.sessionId?<ExportCard sessionId={r.sessionId}/>:null}
         {(r.saved ?? 0) > 0 ? (
           <Pressable onPress={() => router.push('/mistakes')} accessibilityRole="button" style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Feather name="book" size={13} color={C.sub} />
@@ -273,6 +267,7 @@ function SessionResult({ id }: { id: string }) {
         {cur?.ending ? <EndingDialogue ending={cur.ending} char={st.char} sessionId={id} pack={st.pack} /> : null}
         {cur?.ending ? <RecapCard ending={cur.ending} /> : null}
         <ReportCard sessionId={id} />
+        {cur&&!cur.err?<ExportCard sessionId={id}/>:null}
       </ScrollView>
       <View style={{ paddingHorizontal: 16 }}>
         <Btn label={t('홈으로')} icon="home" onPress={() => router.replace('/home')} />
