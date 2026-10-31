@@ -13,7 +13,7 @@ import { stopSpeak } from '../../lib/voice';
 import { createAudioPlayer } from 'expo-audio';
 import { useRec } from '../../lib/useRec';
 import { RealtimeTranscriber, realtimeSupported } from '../../lib/realtime';
-import { useStore } from '../../lib/store';
+import { TurnRec, useStore } from '../../lib/store';
 import { useLang, useT } from '../../lib/i18n';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized';
@@ -65,6 +65,7 @@ export default function SceneScreen() {
   const sending = useRef(false);
   const finishing = useRef(false);
   const review = useRef<{ said: string; better: string; why: string }[]>([]); // 결과 화면 '복습할 표현'
+  const turns = useRef<TurnRec[]>([]); // 결과 화면 '대화 다시 보기'
   // 웹 + 서버 모드면 녹음 중 전사, 안 되면 파일 녹음 후 전사
   const rt = useRef<RealtimeTranscriber | null>(null);
   const recMode = useRef<'rt' | 'file'>('file');
@@ -101,6 +102,7 @@ export default function SceneScreen() {
     setLog([]);
     finishing.current = false;
     review.current.length = 0;
+    turns.current.length = 0;
     eng.current = null;
     createEngine(sceneId, { demo: st.demo, pack: st.pack, lang: st.lang, char: st.char, persona: st.persona, retryOf: retryOf ? String(retryOf) : undefined })
       .then((e) => {
@@ -307,14 +309,17 @@ export default function SceneScreen() {
     setDetail(false);
     setHearts(e.lives);
     setLog((g) => [...g, { who: 'me', text: ans }, { who: 'char', text: o.reply, mark: o.mark }]);
+    let mistakeId: string | undefined;
     if (o.ok) haptic.good();
     else {
       haptic.bad();
       if (o.better && !o.native) review.current.push({ said: ans, better: o.better, why: o.why });
       if (o.mark === 'X' && !o.native) {
-        st.addMistake({ id: `${e.sceneId}-${now()}`, scene: e.sceneId, title: e.title, who: `${t(ch.name)} · ${t(persona.name)}`, when: t('오늘'), said: ans, better: o.better, why: o.why, fixed: false, line: said });
+        mistakeId = `${e.sceneId}-${now()}`;
+        st.addMistake({ id: mistakeId, scene: e.sceneId, title: e.title, who: `${t(ch.name)} · ${t(persona.name)}`, when: t('오늘'), said: ans, better: o.better, why: o.why, fixed: false, line: said });
       }
     }
+    turns.current.push({ npc: said, said: ans, mark: o.mark, reply: o.reply, why: o.why, whySub: o.whySub, better: o.better, tip: o.tip, emotion: o.emotion, mistakeId, views: o.views });
     // 장면 끝 (서버가 세션을 끝낸 경우 포함): 마지막 반응 + '결과 보기'
     if (o.done || o.failed) {
       setReact(null);
@@ -390,7 +395,7 @@ export default function SceneScreen() {
       f = { sessionId: null, passed: null, grade: null, score: null, best: '', worst: '', coins: 0, mistakes: 0, fixed: [], reach: null, infer: null, self: null, ending: null, nextSceneId: null };
     }
     // 오늘 첫 장면이면 연속 출석 +1, 보상 코인도 여기서 한 번만
-    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: (lang !== 'ko' && e.brief.translation?.title) || e.title, goal: (lang !== 'ko' && e.brief.translation?.goal) || e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId, review: review.current.slice(-3) });
+    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: (lang !== 'ko' && e.brief.translation?.title) || e.title, goal: (lang !== 'ko' && e.brief.translation?.goal) || e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId, review: review.current.slice(-3), turns: [...turns.current], char: e.char, persona: e.persona, saved: turns.current.filter((x) => x.mistakeId).length });
     router.replace('/result');
   }
 

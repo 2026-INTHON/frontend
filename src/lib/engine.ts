@@ -32,6 +32,7 @@ export type Out = {
   first?: string; // 다시 해서 맞혔을 때, 이 대사에 처음 했던 답
   tries: number; // 이 대사에서 연속으로 틀린 횟수
   views: View3[]; // 관점 전환
+  emotion?: import('./api').Emotion; // 반응할 때 캐릭터 기분 (결과 화면 기분 변화 선)
   advance: boolean; // △라도 서버가 다음으로 넘어가도 된다고 했는지
   done: boolean; // 장면이 끝났는지
   failed: boolean;
@@ -224,6 +225,7 @@ export function mockEngine(scene: Scene, persona: PersonaId = 'calm', pack: 'ko'
         first: v.ok && retried ? prevFirst : undefined,
         tries: v.ok ? 0 : wrong,
         views: turn.views.map((x) => ({ who: L(x.who), meaning: L(x.meaning), cue: L(x.cue) })),
+        emotion: lastEmotion,
         advance,
         done: advance && i + 1 >= scene.turns.length,
         failed: false,
@@ -401,6 +403,7 @@ export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: 
         first: ok && retried ? prevFirst : undefined,
         tries: ok ? 0 : wrong,
         views: (f.views ?? []).map((v) => ({ who: v.who, meaning: v.meaning, cue: v.cue ?? '' })),
+        emotion: r.turn.emotion,
         // 서버가 다음 대사로 넘겼을 때만 진행. retry 면 같은 대사에서 캐릭터 반응(되묻기)으로 이어가요 (임의로 성공 처리하지 않아요)
         advance: ok || ev?.progression === 'advance' || r.session.nodeIndex !== ses.nodeIndex,
         done: !!r.result || r.session.status === 'succeeded',

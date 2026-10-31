@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CharId, PersonaId } from './data';
-import type { Ending } from './engine';
+import type { Ending, Mark, View3 } from './engine';
+import type { Emotion } from './api';
 import { normLang } from './i18n';
 
 // 앱 상태. 기기에 저장해서 새로고침·재실행해도 이어져요 (웹은 localStorage, 앱은 AsyncStorage).
@@ -21,6 +22,9 @@ export type LastPlayed = {
   at: string; // ISO 시간
 };
 
+// 대화 한 턴 기록 (결과 화면 '대화 다시 보기'). 서버·대본이 준 값만 담아요.
+export type TurnRec = { npc: string; said: string; mark: Mark; reply: string; why: string; whySub?: string | null; better: string; tip?: string; emotion?: Emotion; mistakeId?: string; views?: View3[] };
+
 // 결과 화면에 보여 줄 마지막 결과
 export type LastResult = {
   sessionId?: string | null; // 서버 세션 (상세 보고서 조회)
@@ -37,7 +41,11 @@ export type LastResult = {
   reach: number | null;
   infer: number | null;
   self: number | null;
-  review?: { said: string; better: string; why: string }[]; // 이번 장면에서 아쉬웠던 답 + 예시 답변 (결과 화면에서 정리)
+  review?: { said: string; better: string; why: string }[];
+  turns?: TurnRec[];
+  char?: CharId;
+  persona?: PersonaId;
+  saved?: number; // 이번 장면에서 복습 노트에 저장한 개수 // 이번 장면에서 아쉬웠던 답 + 예시 답변 (결과 화면에서 정리)
   ending: Ending | null; // 마지막 반응 대사·표정·정리 카드 (예전 기록은 제목·문장만)
   nextSceneId: string | null;
   streakDays: number;
