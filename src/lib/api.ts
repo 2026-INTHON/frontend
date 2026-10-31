@@ -76,13 +76,30 @@ export type ApiTurn = {
   render?: Render | null;
   lifeDelta: number;
 };
+// 엔딩 (FE_MIGRATION_V2): 마지막 반응 대사 + 표정 + 정리 카드
+export type ApiEnding = {
+  id: string;
+  kind: 'happy' | 'bad' | string;
+  title: string;
+  text: string;
+  emotion?: Emotion;
+  render?: Render | null;
+  dialogue?: { turnId: string; text: string; subtitle: { language: string; text: string } | null; audioUrl: string | null } | null;
+  recap?: {
+    title: string;
+    story: string;
+    comment: string;
+    prompt: string;
+    translation: { language: string; title: string; story: string; comment: string; prompt: string } | null;
+  } | null;
+};
 export type SessionResult = {
   sessionId: string;
   passed: boolean;
   score: number | null;
   grade?: string | null;
   achievement?: { reach: number | null; infer: number | null; self: number | null } | null;
-  ending?: { id: string; kind: 'happy' | 'deferred' | 'breakdown' | string; title: string; text: string } | null;
+  ending?: ApiEnding | null;
   goodUtterances: { text: string; reason: string }[];
   improvableUtterances: { text: string; betterExpression: string; reason: string; mistakeId: string | null }[];
   rewardCoins: number;
@@ -246,6 +263,8 @@ export const api = {
   pushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) => call<{ id: string }>('/notifications/push/subscriptions', { method: 'POST', body: JSON.stringify(sub) }, true, 10000),
   pushUnsubscribe: (id: string) => call<void>(`/notifications/push/subscriptions/${id}`, { method: 'DELETE' }, true, 10000),
   result: (id: string) => call<SessionResult>(`/sessions/${id}/result`),
+  // 끝난 세션의 엔딩 다시 불러오기 (진행 중이면 409 ENDING_NOT_READY)
+  ending: (id: string) => call<ApiEnding>(`/sessions/${id}/ending`),
   // 반응 대사는 {turnId}, 지금 노드 대사는 {} (서명 URL은 10분 유효)
   speech: (id: string, turnId?: string) => call<{ audioUrl: string }>(`/sessions/${id}/speech`, { method: 'POST', body: JSON.stringify(turnId ? { turnId } : {}) }, true, 20000),
   transcribe: async (uri: string, pack: string) => {

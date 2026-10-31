@@ -21,7 +21,7 @@ type Log = { who: 'char' | 'me'; text: string; mark?: Mark };
 const TONE: Record<string, string> = { office: 'rgba(220,224,229,0.35)', cafe: 'rgba(238,230,219,0.35)', street: 'rgba(217,222,232,0.35)' };
 
 export default function SceneScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, retryOf } = useLocalSearchParams<{ id: string; retryOf?: string }>();
   const sceneId = String(id ?? 'today');
   const st = useStore();
   const ins = useSafeAreaInsets();
@@ -78,7 +78,7 @@ export default function SceneScreen() {
   }
   function start() {
     let alive = true;
-    createEngine(sceneId, { demo: st.demo, pack: st.pack, lang: st.lang, char: st.char, persona: st.persona })
+    createEngine(sceneId, { demo: st.demo, pack: st.pack, lang: st.lang, char: st.char, persona: st.persona, retryOf: retryOf ? String(retryOf) : undefined })
       .then((e) => {
         if (!alive) return;
         eng.current = e;
@@ -286,7 +286,8 @@ export default function SceneScreen() {
   }, [phase]);
   function openReason() {
     if (!out) return;
-    if (out.failed) return setFail(true);
+    // 서버 모드: 체력이 다 떨어지면 세션이 끝나고 배드엔딩이 와요 → 결과 화면에서 엔딩 보여 주기
+    if (out.failed) return E?.mode === 'live' ? finish() : setFail(true);
     setPhase(out.ok ? 'feedback' : 'mistake');
   }
 
@@ -755,6 +756,7 @@ export default function SceneScreen() {
             ) : null}
             <Btn label="힌트 보고 다시 하기" icon="search" onPress={() => { setFail(false); restart(); }} />
             <Btn label="처음부터 다시" kind="line" onPress={restart} />
+            <Btn label="결말 보기" kind="ghost" small onPress={() => { setFail(false); finish(); }} />
             {E?.mode === 'mock' ? (
             <Pressable
               onPress={() => {
