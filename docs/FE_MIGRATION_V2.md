@@ -1,5 +1,14 @@
 # FE Migration V2 — 엔딩 대사·정리 카드·추가 감정 이미지
 
+## 간결한 다국어 보고서 (2026-11-01)
+
+`GET/POST /sessions/{id}/report?language=ko|en|ja|zh`와 `POST /sessions/{id}/report/retry?language=...`에 **현재 UI 선택 언어**를 보낸다. 학습 pack은 계속 ko다. 서버는 `report-v2-concise`와 언어별로 보고서를 캐시하며 기존 긴 v1 보고서는 새 형식으로 준비한다. 생성 중에는 다른 학습을 계속할 수 있다.
+
+- 종합: 한 줄 요약 + `strengths`(잘한 점), `improvements`(개선할 점), `shortcomings`(아쉬운 점), `culturalTakeaways`(문화 팁). 섹션별 최대 두 개의 짧은 문장.
+- 대화별: `details[].coaching`에 같은 세 가지 피드백 배열, `implicitIntent`, `culturalContext`, 한국어 `alternativeExpression`을 제공한다. 재시도도 각각 별도로 분석하며 점수나 기존 판정을 변경하지 않는다.
+- FE는 각 대화를 독립적으로 펼치는 카드로 표시한다. 설명·섹션 제목은 선택 언어만, 실제 한국어 대사·추천 표현은 원문으로 표시한다. 과거 `feedback`, `praise`, `evaluation.reason`을 설명으로 중복 렌더링하지 않는다.
+- 언어 변경 시 이전 언어 응답을 폐기하고 새 보고서를 요청한다. 보이지 않는 탭에서는 조회를 멈추며 요청이 겹치지 않게 완료 후 4초 간격으로 조회한다.
+
 2026-11-01 교수 음성 장애: 생성기 자체 오류가 아니라 서버 내부 Typecast 일일 4,000자 제한 도달이었다. 무료 플랜·결제 수단 없음·잔여 9,623크레딧을 확인한 후 운영 `MALO_TYPECAST_TTS_DAILY_CHAR_LIMIT`만 8,000으로 조정했다. 공급자 월 한도·결제 설정은 변경하지 않았다. FE는 `DAILY_QUOTA_EXCEEDED`를 보존해 선택 언어로 한도 안내를 표시하고 자막 대화를 계속 허용한다. 캐시 재생은 신규 생성량에 포함되지 않는다.
 
 ## 실제 대화 맥락·말투 유지 (2026-11-01)

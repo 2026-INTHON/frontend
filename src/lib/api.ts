@@ -225,6 +225,7 @@ export const authApi = {
 };
 
 export type ReportDetail = {
+  coaching?: { strengths: string[]; improvements: string[]; shortcomings: string[] };
   turnId: string; nodeId?: string; attempt?: number; npcText?: string; learnerText?: string; native?: boolean;
   evaluation?: Evaluation | null; originalIntent?: string | null; implicitIntent?: string | null; culturalContext?: string | null;
   feedback?: string | null; feedbackTranslation?: {language:string;text:string} | string | null; praise?: string | null; alternativeExpression?: string | null; practiceTip?: string | null;
@@ -236,7 +237,7 @@ export type SessionReport = {
   error: { code: string; message: string; retryable: boolean } | null;
   report: null | {
     id: string; title?: string; provisional?: boolean; language?: string;
-    summary?: { headline?: string; overallFeedback?: string; strengths?: string[]; improvements?: string[]; culturalTakeaways?: string[]; nextPractice?: string | string[] };
+    summary?: { headline?: string; overallFeedback?: string; strengths?: string[]; improvements?: string[]; shortcomings?: string[]; culturalTakeaways?: string[]; nextPractice?: string | string[] };
     details?: ReportDetail[];
   };
 };
@@ -286,9 +287,9 @@ export const api = {
   retry: (id: string, subtitleLanguage?: string) => call<PlaySession>(`/sessions/${id}/retry`, { method: 'POST', body: JSON.stringify({subtitleLanguage}) }, true, 120000),
   correct: (id: string, turnId: string) => call<PlaySession>(`/sessions/${id}/correction`, { method: 'POST', body: JSON.stringify({turnId}) }),
   pause: (id: string) => call<PlaySession>(`/sessions/${id}/pause`, { method: 'POST', body: '{}' }),
-  report: (id: string) => call<SessionReport>(`/sessions/${id}/report`),
-  makeReport: (id: string) => call<SessionReport>(`/sessions/${id}/report`, { method: 'POST', body: '{}' }),
-  retryReport: (id: string) => call<SessionReport>(`/sessions/${id}/report/retry`, { method: 'POST', body: '{}' }),
+  report: (id: string, language?: string) => call<SessionReport>(`/sessions/${id}/report?${qs({language})}`),
+  makeReport: (id: string, language?: string) => call<SessionReport>(`/sessions/${id}/report?${qs({language})}`, { method: 'POST', body: '{}' }),
+  retryReport: (id: string, language?: string) => call<SessionReport>(`/sessions/${id}/report/retry?${qs({language})}`, { method: 'POST', body: '{}' }),
   // 나만의 챕터 생성: 200 은 '작업 접수'일 뿐 완성이 아니에요
   generate: (b: { clientRequestId: string; prompt: string; characterId: string; personalityId: string; pack: string; lessonCount: number }) =>
     call<GenerationJob>('/chapter-generations', { method: 'POST', body: JSON.stringify(b) }, true, 30000),

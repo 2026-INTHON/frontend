@@ -8,7 +8,7 @@ const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {
 function setup(handler,initial=null){
  let token=initial;
  const context=vm.createContext({process:{env:{}},Platform:{OS:'web'},URLSearchParams,FormData,AbortController,setTimeout,clearTimeout,
-  getTokens:async()=>token,setTokens:async t=>{token=t;},fetch:async(url,init)=>handler(new URL(url).pathname.replace('/api/v1',''),init),
+  getTokens:async()=>token,setTokens:async t=>{token=t;},fetch:async(url,init)=>handler(new URL(url).pathname.replace('/api/v1',''),init,new URL(url).searchParams),
  });
  vm.runInContext(source('api.ts')+'\nthis.client={api,guest,refresh};',context);
  return context.client;
@@ -55,3 +55,9 @@ test('Concurrent token readers wait for native storage before creating auth requ
  assert.equal((await first).accessToken,'stored');assert.equal((await second).accessToken,'stored');
  await write;assert.equal((await context.tokens.getTokens()).accessToken,'fresh');assert.equal(reads,1);
 });
+
+ test('Report reads, generation and retry use UI language independently of learning pack',async()=>{
+  const seen=[];const {api}=setup(async(path,init,query)=>{seen.push({path,language:query.get('language')});return Response.json({status:'queued'});},{accessToken:'token'});
+  await api.report('session','ja');await api.makeReport('session','en');await api.retryReport('session','zh');
+  assert.deepEqual(seen,[{path:'/sessions/session/report',language:'ja'},{path:'/sessions/session/report',language:'en'},{path:'/sessions/session/report/retry',language:'zh'}]);
+ });
