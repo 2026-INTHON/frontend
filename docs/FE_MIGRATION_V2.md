@@ -155,3 +155,13 @@ FE는 감정이나 키 문자열로 URL을 조립하지 않고 `ending.render.im
 ## 배포 및 실제 API 확인
 
 2026-11-01 기준 BE·AI 운영 배포 완료. 여자친구·교수의 실제 실패 엔딩과 정상 해피엔딩을 live 모드로 완료해 영어 자막·정리 카드·등록된 종료 이미지를 확인했다. 두 실패 엔딩의 마지막 음성 파일도 내려받아 확인했다. 자동 검사는 BE 23개·AI 23개가 통과했고, 진행 중/다른 사용자 접근과 정중한 보류의 판정·감정 분리도 포함한다. 실제 모바일 화면 전환과 음성 재생 버튼 연결은 FE 작업이다.
+# 2026-11-01 캐릭터별 프로필과 카드 뒤집기
+
+- PR #23은 main `9b2de694`에 포함되었고 11월 1일 04:38 KST에 배포되었다. develop의 CI는 검사만 실행하며 실제 배포는 검증된 main 릴리스를 따른다.
+- 홈 캐릭터 영역 우측 상단 44px 원형 버튼으로 프로필을 열고 닫는다. 흰색 반투명 패널 안에서 스크롤하며, 뒤쪽 캐릭터의 장면 시작 동작은 잠긴다. 하단 장면 카드와 탐색은 유지한다. 웹 Escape로 닫을 수 있다.
+- `GET /api/v1/characters` → 선택 캐릭터의 `personalities[]`에서 선택한 유형의 `profile`을 표시한다. FE `seoyun/prof/junho/boss`와 `tease/picky/calm`은 기존 SERVER_CHAR / SERVER_PERSONA 매핑을 사용한다.
+- 공개 필드: `age`, `role`, `occupation`, `introduction`, `relationship`, `traits`, `likes`, `dislikes`, `hobbies`, `values`, `speakingStyle`, `sampleLines`. `profileRevision`으로 설정 버전을 확인한다.
+- 로딩·누락·실패는 명시적으로 표시하고 다시 불러오기를 제공한다. 캐릭터/유형 전환 시 이전 프로필을 보여주지 않는다. 이전 대화의 유형이 현재 선택과 다르면 해당 대화를 자동으로 이어가지 않는다.
+- 원본은 BE `src/personas/{girlfriend,professor,friend,manager}.json`. 카드 정보와 실시간 AI 답변·신규 챕터 생성이 같은 원본을 사용한다. 상세 편집법은 해당 디렉터리 README 참고.
+- 프로필 내용은 수정 가능한 가상 인물 초안이다. 좋아하는 것이 다르다는 이유로 X 판정을 하지 않는다. 기존 DB 고정 대본은 이 배포로 재작성하지 않는다.
+

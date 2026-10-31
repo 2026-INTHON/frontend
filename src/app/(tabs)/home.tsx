@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -9,16 +9,22 @@ import { CharId, IMG, PERSONAS, PLACE_OF, PersonaId, charById, sceneForChar } fr
 import { useStore } from '../../lib/store';
 import { useAccount } from '../../lib/useAccount';
 import { resolveTodayScene } from '../../lib/engine';
+import { CharacterProfileOverlay } from '../../components/character-profile';
 
 // 09 홈: 방금 한 대화를 그대로 이어서 보여 줘요 (고정 문구·가짜 보상 없음)
 export default function Home() {
   const st = useStore();
   const acc = useAccount();
+  const [profile, setProfile] = useState({ key: '', open: false });
   const ins = useSafeAreaInsets();
   // 캐릭터를 바꿨으면 그 캐릭터 기준으로 (이전 캐릭터의 이어하기는 숨겨요)
-  const lp = st.lastPlayed && st.lastPlayed.char === st.char ? st.lastPlayed : null;
+  const lp = st.lastPlayed && st.lastPlayed.char === st.char && st.lastPlayed.persona === st.persona ? st.lastPlayed : null;
   const charId = st.char;
   const personaId = lp?.persona ?? st.persona;
+  const profileKey = `${charId}-${personaId}`;
+  if (profile.key !== profileKey) setProfile({ key: profileKey, open: false });
+  const profileOpen = profile.key === profileKey && profile.open;
+  const setProfileOpen = useCallback((open: boolean) => setProfile({ key: profileKey, open }), [profileKey]);
   const c = charById(charId);
   const p = PERSONAS[charId].find((x) => x.id === personaId) ?? PERSONAS[charId][2];
   const today = useToday(st.demo, charId, personaId, st.pack, !lp);
@@ -49,21 +55,24 @@ export default function Home() {
       </View>
 
       {/* 오늘의 장면 / 이어하기 */}
-      <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={`${next.tag}: ${next.title}`} style={{ flex: 1, marginHorizontal: 24, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
+      <View style={{ flex: 1, marginHorizontal: 24, marginTop: 14, borderRadius: 24, overflow: 'hidden', backgroundColor: '#EEE6DB' }}>
         <Image source={IMG.bg[PLACE_OF[charId]]} style={{ position: 'absolute', width: '100%', height: '100%' }} resizeMode="cover" />
         {/* 캐릭터는 아래 정보 칸 위쪽 공간에 전신이 다 보이게 (신발까지) */}
         <View style={{ flex: 1 }}>
-          <Image source={IMG.char[charId]} style={{ flex: 1, width: '56%', height: undefined, marginLeft: '34%', marginTop: 18, marginBottom: 6 }} resizeMode="contain" />
+          <Pressable onPress={go} disabled={profileOpen} accessible={!profileOpen} aria-hidden={profileOpen} accessibilityElementsHidden={profileOpen} importantForAccessibility={profileOpen ? 'no-hide-descendants' : 'auto'} accessibilityRole="button" accessibilityLabel={`${next.tag}: ${next.title}`} style={{ flex: 1 }}>
+            <Image source={IMG.char[charId]} style={{ flex: 1, width: '56%', height: undefined, marginLeft: '34%', marginTop: 18, marginBottom: 6 }} resizeMode="contain" />
+          </Pressable>
           <View style={{ position: 'absolute', top: 14, left: 14 }}>
             <Tag label={next.tag} tone="lime" />
           </View>
+          <CharacterProfileOverlay key={`${charId}-${personaId}`} char={charId} persona={personaId} open={profileOpen} onOpenChange={setProfileOpen} />
         </View>
-        <View style={{ marginHorizontal: 12, marginBottom: 12, backgroundColor: C.white, borderRadius: 18, padding: 14 }}>
+        <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={`${next.title} 시작`} style={{ marginHorizontal: 12, marginBottom: 12, backgroundColor: C.white, borderRadius: 18, padding: 14 }}>
           <T s="small">{c.name} · {p.name}</T>
           <T s="h3">{next.title}</T>
           <T s="sub">{next.sub}</T>
-        </View>
-      </Pressable>
+        </Pressable>
+      </View>
 
       <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 24, marginTop: 12 }}>
         <Tile icon="grid" t="다른 장면" s="챕터 목록" onPress={() => router.push('/episodes')} />
