@@ -8,6 +8,7 @@ import { View, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider, useStore } from '../lib/store';
 import { C } from '../lib/theme';
+import { RecordingBoundary } from '../components/screen-recording';
 
 // 회원 토큰 갱신이 실패하면 처음 화면(로그인)으로
 setSignedOutHandler(() => router.replace('/'));
@@ -31,6 +32,7 @@ export default function RootLayout() {
           <Stack.Screen name="scene/[id]" options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="result" options={{ animation: 'fade', gestureEnabled: false }} />
         </Stack>
+        <RecordingBoundary />
         </Hydrated>
         </PhoneFrame>
       </StoreProvider>
@@ -65,7 +67,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   if (Platform.OS !== 'web') return <>{children}</>;
   return (
     <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#E9E7E1' }}>
-      <View style={{ flex: 1, width: '100%', maxWidth: 430, overflow: 'hidden', backgroundColor: C.bg, boxShadow: '0 0 40px rgba(0,0,0,0.08)' } as any}>{children}</View>
+      <View nativeID="malo-recording-frame" style={{ flex: 1, width: '100%', maxWidth: 430, overflow: 'hidden', backgroundColor: C.bg, boxShadow: '0 0 40px rgba(0,0,0,0.08)' } as any}>{children}</View>
     </View>
   );
 }
