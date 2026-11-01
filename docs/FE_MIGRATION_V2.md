@@ -3,7 +3,7 @@
 ## 최초 진입 Welcome 화면 (2026-11-01)
 
 - 첫 설정 화면과 설정의 `초기 화면으로 이동`은 `/`의 Welcome 화면이다. 학습 기록·계정·코인은 보존한다. 설정이 없는 사용자의 학습 화면 직접 접속도 Welcome으로 연결한다.
-- 제공된 디자인에 맞춰 기존 Malo 로고와 캐릭터 4명, 검정 Get started, 검정 테두리 Sign in with Google, 텍스트형 Start without signing in을 배치한다. 언어 선택 전 화면은 영어로 표시한다.
+- 제공된 디자인에 맞춰 기존 Malo 로고와 캐릭터 4명, 검정 Get started, 검정 테두리 Sign in with Google, 텍스트형 Start without signing in을 배치한다. 언어 선택 전 화면은 영어로 표시한다. 배경은 언어 설정과 같은 C.bg 베이지색이며, Welcome 제목은 30px, Malo 로고는 최대 96px 높이로 키운다. 좁은 화면에서는 로고를 비율에 맞춰 줄인다.
 - 두 시작 버튼 → `/onboarding/lang` → 캐릭터 설정. Google 버튼은 기존 OAuth를 사용하며 로그인 후 설정을 계속한다. 언어 화면에서 뒤로 가면 Welcome으로 돌아온다. 설정에서 언어 변경을 연 경우에는 설정으로 돌아간다.
 - 온보딩과 언어 선택을 이미 마친 사용자는 기존처럼 Home으로 진입한다. 작은 화면에서는 전체 콘텐츠를 스크롤할 수 있다.
 
