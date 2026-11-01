@@ -74,7 +74,7 @@ export default function Home() {
             <IconBtn name="more-horizontal" size={44} label={t('{name} 자세한 특성', { name: t(c.name) })} onPress={() => setInfo(true)} />
           </View>
         </View>
-        <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={t('{title} 시작', { title: next.title })} style={{ marginHorizontal: 12, marginBottom: 12, backgroundColor: C.white, borderRadius: 20, padding: 16, gap: 6 }}>
+        <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={t('{title} 시작', { title: next.title })} style={{ backgroundColor: C.white, padding: 24, gap: 6 }}>
           <Tag label={next.tag} tone="dark" />
           <T s="h2">{next.title}</T>
           <T s="sub" numberOfLines={1}>{t(c.name)} · {t(p.name)}{next.sub ? ` · ${next.sub}` : ''}</T>

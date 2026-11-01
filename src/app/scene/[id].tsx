@@ -136,12 +136,7 @@ export default function SceneScreen() {
   }, [sceneId, st.hydrated, st.demo, st.pack, st.lang, st.char, st.persona, retryOf]);
 
   const canRealtime = () => eng.current?.mode === 'live' && realtimeSupported();
-  // 말할 차례가 되면 전사 연결을 미리 준비 (실패해도 녹음 버튼은 파일 방식으로 동작)
-  useEffect(() => {
-    if (phase !== 'talk' || !canRealtime()) return;
-    if (!rt.current) rt.current = new RealtimeTranscriber(st.pack);
-    rt.current.prepare().catch(() => null);
-  }, [phase]);
+  // 전사 세션은 micDown에서만 발급. 텍스트 대화·결과 화면에는 필요하지 않아요.
   // 녹음 중 시간·소리 크기
   useEffect(() => {
     if (phase !== 'listening' || recMode.current !== 'rt') return;

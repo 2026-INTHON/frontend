@@ -5,6 +5,10 @@ import {stripTypeScriptTypes} from 'node:module';
 import vm from 'node:vm';
 const source=file=>stripTypeScriptTypes(readFileSync(new URL('../src/lib/'+file,import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,''),{mode:'transform'});
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
+test('API preserves server rate-limit cooldown for speech retries',async()=>{
+ const {api}=setup(async()=>Response.json({error:{code:'RATE_LIMITED',message:'wait'}},{status:429,headers:{'Retry-After':'42'}}),{accessToken:'token'});
+ await assert.rejects(api.realtimeSession('ko'),error=>error.status===429&&error.retryAfter===42);
+});
 function setup(handler,initial=null){
  let token=initial;
  const context=vm.createContext({process:{env:{}},Platform:{OS:'web'},URLSearchParams,FormData,AbortController,setTimeout,clearTimeout,

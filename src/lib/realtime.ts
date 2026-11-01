@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { api } from './api';
+import { api, ApiError } from './api';
 
 // 웹 전용: 녹음하는 동안 바로 글자로 바꾸기 (FE_INTEGRATION 「음성 응답과 지연 시간」)
 // 마이크 → 24kHz mono PCM16 → 150ms 단위 base64 → input_audio_buffer.append
@@ -47,6 +47,8 @@ function downsample(input: Float32Array, from: number): Int16Array {
 export class RealtimeTranscriber {
   private ws: WebSocket | null = null;
   private ready: Promise<void> | null = null;
+  private generation = 0;
+  private retryAt = 0;
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
   private node: AudioWorkletNode | null = null;
@@ -63,15 +65,18 @@ export class RealtimeTranscriber {
 
   constructor(private pack: string) {}
 
-  // 녹음 전에 연결을 미리 준비해요
+  // 첫 마이크 입력 때만 발급하고, 같은 장면의 발화들은 연결을 재사용해요.
   prepare(): Promise<void> {
-    if (this.ready && this.ws && this.ws.readyState <= 1) return this.ready;
+    if (this.ready) return this.ready;
+    if (Date.now() < this.retryAt) return Promise.reject(new Error('realtime cooldown'));
+    const generation = this.generation;
     this.ready = (async () => {
       const cred = await api.realtimeSession(this.pack);
+      if (generation !== this.generation) throw new Error('closed');
       await new Promise<void>((res, rej) => {
         const ws = new WebSocket(cred.websocketUrl, ['realtime', 'openai-insecure-api-key.' + cred.value]);
         this.ws = ws;
-        const t = setTimeout(() => rej(new Error('timeout')), 8000);
+        const t = setTimeout(() => { rej(new Error('timeout')); ws.close(); }, 8000);
         ws.onopen = () => {
           clearTimeout(t);
           res();
@@ -79,16 +84,24 @@ export class RealtimeTranscriber {
         ws.onerror = () => {
           clearTimeout(t);
           rej(new Error('ws'));
+          ws.close();
         };
         ws.onclose = () => {
-          this.ws = null;
-          this.ready = null;
+          clearTimeout(t);
+          rej(new Error('closed'));
+          if (this.ws === ws) {
+            this.ws = null;
+            this.ready = null;
+          }
         };
-        ws.onmessage = (m) => this.onEvent(m.data);
+        ws.onmessage = (m) => { if (this.ws === ws) this.onEvent(m.data); };
       });
-    })();
-    this.ready.catch(() => {
-      this.ready = null;
+    })().catch((error) => {
+      if (generation === this.generation) {
+        this.ready = null;
+        this.retryAt = Date.now() + (error instanceof ApiError && error.status === 429 ? error.retryAfter ?? 60 : 5) * 1000;
+      }
+      throw error;
     });
     return this.ready;
   }
@@ -184,16 +197,19 @@ export class RealtimeTranscriber {
       });
       this.flushWaiters();
     });
-    this.close(); // 자격증명은 60초짜리라 매번 새로
+    // 토큰 만료는 새 연결 인증에만 적용돼요. 이미 연결된 세션은 다음 발화에도 사용해요.
     return text.trim();
   }
 
   close() {
+    this.generation++;
     this.stopMic();
     try {
       this.ws?.close();
     } catch {}
     this.ws = null;
     this.ready = null;
+    this.pending = [];
+    this.pendingLen = 0;
   }
 }
