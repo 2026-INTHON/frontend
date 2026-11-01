@@ -46,7 +46,7 @@ export function CharacterTraitsSheet({ char, persona, lang, onClose }: { char: C
             </View>
             <View style={{ flex: 1, gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                <T s="h2">{p?.name || t(ch.name)}</T>
+                <T s="h2">{t(ch.name)}</T>
                 <T s="small">{t(ch.role)}</T>
               </View>
               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>

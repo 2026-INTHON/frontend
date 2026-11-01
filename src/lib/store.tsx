@@ -14,6 +14,7 @@ export type Mistake = { id: string; scene: string; title: string; said: string; 
 export type LastPlayed = {
   sceneId: string;
   title: string;
+  lang?: string; // title을 저장할 때의 표시 언어 (바뀌면 홈에서 지금 언어 제목을 다시 찾아요)
   char: CharId;
   persona: PersonaId;
   status: 'playing' | 'paused' | 'done';
