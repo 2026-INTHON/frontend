@@ -45,7 +45,7 @@ function LanguageGate() {
   const segments = useSegments();
   const first = segments[0];
   useEffect(() => {
-    if (!languageSelected && first && first !== 'index' && first !== 'auth' && first !== 'onboarding') router.replace('/onboarding/lang');
+    if (!languageSelected && first && first !== 'index' && first !== 'auth' && first !== 'onboarding') router.replace('/');
   }, [languageSelected, first]);
   return null;
 }

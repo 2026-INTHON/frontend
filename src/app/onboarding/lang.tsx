@@ -17,7 +17,7 @@ export default function Lang() {
   const copy = learningCopy(sel);
   return (
     <Screen>
-      <TopBar />
+      <TopBar onBack={() => returnTo === 'settings' ? router.replace('/settings') : router.replace('/')} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24, gap: 12 }}>
         <Tag label={copy.koreanPractice} tone="white" />
         <T s="h1" style={{ marginTop: 8 }}>{copy.chooseLanguage}</T>

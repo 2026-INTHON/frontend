@@ -36,7 +36,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "녹화 시작을 취소했어요. 원할 때 다시 시작할 수 있어요.": ["Recording was cancelled. You can try again whenever you like.", "録画の開始をキャンセルしました。いつでもやり直せます。", "已取消开始录制。您可以随时重试。"],
   "녹화를 시작하지 못했어요. PC Chrome·Edge에서 다시 시도해 주세요.": ["Could not start recording. Try again in desktop Chrome or Edge.", "録画を開始できませんでした。PC版Chrome・Edgeで再度お試しください。", "无法开始录制。请在电脑版 Chrome 或 Edge 中重试。"],
   "초기 화면으로 이동": ["Back to initial setup", "初期設定に戻る", "返回初始设置"],
-  "학습 기록은 유지하고 언어 선택부터 다시 시작해요.": ["Keep your learning history and start again from language selection.", "学習記録を残したまま、言語選択からやり直せます。", "保留学习记录，从语言选择重新开始。"],
+  "학습 기록은 유지하고 시작 화면으로 돌아가요.": ["Return to the welcome screen without losing your learning history.", "学習記録を残したまま、スタート画面に戻ります。", "保留学习记录，返回欢迎页面。"],
   "파일이 완성되면 아래 저장 버튼을 눌러 주세요.": ["When your file is ready, tap the download or save button below.", "ファイルが完成したら、下の保存ボタンを押してください。", "文件生成后，请点击下方下载或保存按钮。"],
   "영상 다운로드": ["Download video", "動画をダウンロード", "下载视频"],
   "PDF 다운로드": ["Download PDF", "PDFをダウンロード", "下载 PDF"],
