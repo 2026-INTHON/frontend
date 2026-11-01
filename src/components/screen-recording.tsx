@@ -8,7 +8,6 @@ import { C } from '../lib/theme';
 import { Btn, Card, IconBtn, Sheet, T } from './ui';
 
 export const useScreenRecording = () => useSyncExternalStore(screenRecorder.subscribe, screenRecorder.getSnapshot, screenRecorder.getSnapshot);
-const duration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 const unsupported = '이 브라우저에서는 앱 녹화를 지원하지 않아요. PC Chrome·Edge 또는 기기의 화면 녹화를 사용해 주세요.';
 
 export function SceneRecordingButton({ owner, route, onStarted }: { owner: string; route: string; onStarted: () => void }) {
@@ -25,7 +24,6 @@ export function SceneRecordingButton({ owner, route, onStarted }: { owner: strin
     <IconBtn name={recording ? 'square' : s.phase === 'ready' ? 'download' : 'video'} size={36}
       bg={recording ? C.red : C.white} color={recording ? C.white : C.ink}
       label={t(recording ? '녹화 중지' : s.phase === 'ready' ? '녹화본 저장' : '화면 녹화 시작')} onPress={press} />
-    {recording ? <T s="small" style={{ color: C.ink, paddingRight: 6 }}>{duration(s.seconds)}</T> : null}
     <Sheet visible={open} onClose={() => setOpen(false)}>
       <RecordingControls owner={owner} route={route} onStarted={() => { setOpen(false); onStarted(); }} />
     </Sheet>
@@ -44,9 +42,9 @@ export function RecordingControls({ owner, route, onStarted, result = false }: {
     {other && (active || ready) ? <T s="small">{t('이전 대화의 녹화본이에요. 저장한 뒤 삭제하면 새로 녹화할 수 있어요.')}</T> : null}
     {s.phase === 'recording' ? <>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }} accessibilityLiveRegion="polite">
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.red }} /><T s="label">{t('녹화 중')} · {duration(s.seconds)}</T>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.red }} /><T s="label">{t('녹화 중')}</T>
       </View>
-      <T s="small">{t(result ? '보고서 화면도 녹화 중이에요. 다 확인한 뒤 중지하고 저장해 주세요.' : '화면과 캐릭터 음성을 녹화 중이에요. 내 목소리는 말하기 버튼을 켠 동안만 담겨요.')}</T>
+      <T s="small">{t(result ? '보고서 화면을 담은 뒤 자동으로 녹화를 마쳐요.' : '화면과 캐릭터 음성을 녹화 중이에요. 내 목소리는 말하기 버튼을 켠 동안만 담겨요.')}</T>
       <Btn small label={t('녹화 중지')} icon="square" kind="line" onPress={() => { void screenRecorder.stop(); }} />
     </> : null}
     {s.phase === 'starting' || s.phase === 'stopping' ? <View accessibilityLiveRegion="polite" style={{ gap: 8 }}>
@@ -54,7 +52,7 @@ export function RecordingControls({ owner, route, onStarted, result = false }: {
       {s.phase === 'starting' ? <Btn small kind="ghost" label={t('취소')} onPress={() => { void screenRecorder.stop(); }} /> : null}
     </View> : null}
     {ready ? <>
-      <T s="small">{duration(s.seconds)} · {(s.bytes / 1024 / 1024).toFixed(1)} MB · {s.mime.startsWith('video/mp4') ? 'MP4' : 'WebM'}</T>
+      <T s="small">{(s.bytes / 1024 / 1024).toFixed(1)} MB · {s.mime.startsWith('video/mp4') ? 'MP4' : 'WebM'}</T>
       <Btn label={t('녹화본 저장')} icon="download" onPress={() => screenRecorder.download()} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Btn small kind="line" label={t('미리 보기')} icon="play" style={{ flex: 1 }} onPress={() => setPreview(true)} />
@@ -89,6 +87,12 @@ export function RecordingControls({ owner, route, onStarted, result = false }: {
 
 export function RecordingResult({ owner }: { owner?: string }) {
   const s = useScreenRecording();
+  useEffect(() => {
+    if (!owner || s.owner !== owner || s.phase !== 'recording') return;
+    // Byte updates must not restart the three seconds after this report mounts.
+    const timer = setTimeout(() => { void screenRecorder.stop(); }, 3000);
+    return () => clearTimeout(timer);
+  }, [owner, s.owner, s.phase]);
   // An old report must not claim to own another conversation's recording.
   if (s.owner && s.owner !== owner) return null;
   return <Card><RecordingControls owner={owner} result /></Card>;

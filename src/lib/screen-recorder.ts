@@ -3,14 +3,14 @@ type CaptureTrack = MediaStreamTrack & { getCaptureHandle?: () => { handle: stri
 type CaptureDevices = MediaDevices & { setCaptureHandleConfig?: (config: { handle: string; permittedOrigins: string[] }) => void };
 export type RecordingState = {
   phase: 'idle' | 'starting' | 'recording' | 'stopping' | 'ready' | 'error';
-  owner: string; route: string; startedAt: number; seconds: number;
+  owner: string; route: string; startedAt: number;
   url: string; mime: string; bytes: number; error: string; notice: string; downloaded: boolean; microphoneActive: boolean;
 };
-const empty = (): RecordingState => ({ phase: 'idle', owner: '', route: '', startedAt: 0, seconds: 0, url: '', mime: '', bytes: 0, error: '', notice: '', downloaded: false, microphoneActive: false });
+const empty = (): RecordingState => ({ phase: 'idle', owner: '', route: '', startedAt: 0, url: '', mime: '', bytes: 0, error: '', notice: '', downloaded: false, microphoneActive: false });
 type Capture = {
   streams: MediaStream[]; context?: AudioContext; recorder?: MediaRecorder; chunks: Blob[];
   released: boolean; mic?: MediaStream; micGain?: GainNode;
-  timer?: ReturnType<typeof setInterval>; done?: Promise<void>; resolve?: () => void;
+  done?: Promise<void>; resolve?: () => void;
 };
 export function screenRecordingSupported() {
   return typeof window !== 'undefined' && window.isSecureContext &&
@@ -28,7 +28,6 @@ export class ScreenRecorder {
   private release(c: Capture) {
     if (c.micGain) c.micGain.gain.value = 0;
     c.released = true;
-    clearInterval(c.timer);
     c.streams.forEach(s => s.getTracks().forEach(t => t.stop()));
     if (c.context && c.context.state !== 'closed') void c.context.close().catch(() => {});
   }
@@ -112,7 +111,6 @@ export class ScreenRecorder {
       }));
       recorder.start(1000);
       this.update({ phase: 'recording', startedAt: Date.now(), mime: recorder.mimeType || mime });
-      c.timer = setInterval(() => this.update({ seconds: Math.floor((Date.now() - this.state.startedAt) / 1000) }), 1000);
       return true;
     } catch (e) {
       this.release(c);
@@ -141,7 +139,7 @@ export class ScreenRecorder {
     if (this.state.phase === 'stopping') return c.done;
     if (this.state.phase !== 'recording') return;
     this.setMicrophoneActive(this.state.owner, false);
-    this.update({ phase: 'stopping', seconds: Math.floor((Date.now() - this.state.startedAt) / 1000) });
+    this.update({ phase: 'stopping' });
     if (c.recorder?.state !== 'inactive') c.recorder?.stop();
     this.release(c);
     await c.done;

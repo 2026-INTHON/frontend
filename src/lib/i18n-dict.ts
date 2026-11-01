@@ -17,7 +17,7 @@ export const DICT: Record<string, [string, string, string]> = {
   "녹화본이 준비됐어요": ["Your recording is ready", "録画を保存できます", "录屏已准备好"],
   "미리 보기": ["Preview", "プレビュー", "预览"],
   "녹화본은 서버에 업로드하지 않아요. 창을 닫기 전에 저장해 주세요.": ["Recordings stay on your device. Save before closing this tab.", "録画はサーバーに送信しません。タブを閉じる前に保存してください。", "录屏不会上传至服务器。请在关闭标签页前保存。"],
-  "보고서 화면도 녹화 중이에요. 다 확인한 뒤 중지하고 저장해 주세요.": ["The report screen is being recorded too. Stop and save when you have finished reviewing it.", "レポート画面も録画中です。確認が終わったら停止して保存してください。", "报告页面也正在录制。查看完毕后请停止并保存。"],
+  "보고서 화면을 담은 뒤 자동으로 녹화를 마쳐요.": ["Recording ends automatically after capturing the report screen.", "レポート画面を録画したら、自動で終了します。", "录制报告画面后会自动结束录屏。"],
   "공유 화면과 마이크를 확인하고 있어요…": ["Waiting for screen and microphone permission…", "画面共有とマイクの許可を確認中…", "正在等待屏幕和麦克风授权…"],
   "녹화를 마무리하고 있어요…": ["Finishing your recording…", "録画を仕上げています…", "正在完成录屏…"],
   "이전 대화의 녹화본이에요. 저장한 뒤 삭제하면 새로 녹화할 수 있어요.": ["This is your previous recording. Save and delete it before starting another.", "前の会話の録画です。保存してから削除すると、新しく録画できます。", "这是上一段对话的录屏。保存并删除后即可开始新录制。"],
