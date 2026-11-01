@@ -62,9 +62,9 @@ export default function Settings() {
           <Row k={t('코인')} right={<Coin n={st.coins} />} />
           <Btn label={t('초기 화면으로 이동')} kind="line" icon="arrow-left" onPress={() => {
             st.set({ onboarded: false, languageSelected: false });
-            router.replace('/onboarding/lang');
+            router.replace('/');
           }} />
-          <T s="small">{t('학습 기록은 유지하고 언어 선택부터 다시 시작해요.')}</T>
+          <T s="small">{t('학습 기록은 유지하고 시작 화면으로 돌아가요.')}</T>
           {acc.user && !acc.user.isGuest ? (
             <Pressable onPress={async () => { await disablePush(); await acc.logout(); st.set({ onboarded: false }); router.replace('/'); }} accessibilityRole="button">
               <T s="label" style={{ color: C.sub }}>{t('로그아웃')}</T>
