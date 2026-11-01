@@ -11,7 +11,7 @@ export function ExportCard({sessionId}:{sessionId:string}){
   <T s="h3">{t('학습 저장하기')}</T>
   <T s="small">{t('영상에는 전체 대화·캐릭터 반응·점수가 담겨요. 내 답변은 텍스트로 저장돼요.')}</T>
   {(['video','pdf'] as const).map(format=><ExportRow key={`${sessionId}:${lang}:${format}`} sessionId={sessionId} language={lang} format={format}/>)}
-  {Platform.OS==='web'?<T s="small">{t('완성된 영상은 공유 메뉴에서 저장하거나 파일로 다운로드할 수 있어요.')}</T>:null}
+  <T s="small">{t('파일이 완성되면 아래 저장 버튼을 눌러 주세요.')}</T>
  </Card>;
 }
 function ExportRow({sessionId,language,format}:{sessionId:string;language:string;format:'video'|'pdf'}){
@@ -19,8 +19,10 @@ function ExportRow({sessionId,language,format}:{sessionId:string;language:string
  const alive=useRef(true),locked=useRef(false);
  useEffect(()=>{alive.current=true;return ()=>{alive.current=false;};},[]);
  useEffect(()=>{
-  let gone=false,timer:ReturnType<typeof setTimeout>|undefined;
+  let gone=false,refreshing=false,timer:ReturnType<typeof setTimeout>|undefined;
   async function refresh(){
+   if(gone||refreshing)return;
+   clearTimeout(timer);refreshing=true;
    try{
     if(AppState.currentState!=='background'&&(Platform.OS!=='web'||document.visibilityState!=='hidden')){
      const items=await api.exports(sessionId,language);if(gone)return;
@@ -28,9 +30,13 @@ function ExportRow({sessionId,language,format}:{sessionId:string;language:string
      if(!found||['ready','failed'].includes(found.status))return;
     }
    }catch{if(!gone){setError('상태를 확인하지 못했어요. 다시 시도해 주세요.');setLoading(false);}}
+   finally{refreshing=false;}
    if(!gone)timer=setTimeout(refresh,4000);
   }
-  void refresh();return ()=>{gone=true;clearTimeout(timer);};
+  const resume=()=>{void refresh();};
+  const appState=AppState.addEventListener('change',state=>{if(state==='active')resume();});
+  if(Platform.OS==='web')document.addEventListener('visibilitychange',resume);
+  void refresh();return ()=>{gone=true;clearTimeout(timer);appState.remove();if(Platform.OS==='web')document.removeEventListener('visibilitychange',resume);};
  },[sessionId,language,format,attempt]);
  useEffect(()=>{
   if(job?.status!=='ready')return;
@@ -52,10 +58,12 @@ function ExportRow({sessionId,language,format}:{sessionId:string;language:string
  }
  const pending=job&&['queued','running'].includes(job.status);
  const preparing=job?.status==='ready'&&!prepared&&!error;
- const label=job?.status==='ready'?(format==='video'?(Platform.OS==='web'?'영상 저장 / 공유':'갤러리에 영상 저장'):'PDF 저장 / 공유'):(job?.status==='failed'?'다시 만들기':format==='video'?'전체 대화 영상 만들기':'리포트 PDF 만들기');
+ const label=job?.status==='ready'?(format==='video'?(Platform.OS==='web'?'영상 다운로드':'갤러리에 영상 저장'):(Platform.OS==='web'?'PDF 다운로드':'PDF 저장 / 공유')):(job?.status==='failed'?'다시 만들기':format==='video'?'전체 대화 영상 만들기':'리포트 PDF 만들기');
+ const audioProgress=job?.stage.match(/^audio:(\d+)\/(\d+)$/);
+ const progress=job?.stage==='waiting_report'?t('상세 리포트를 준비하고 있어요.'):job?.stage==='rendering'?t('파일을 완성하고 있어요.'):audioProgress?`${t('음성을 준비하고 있어요.')} ${audioProgress[1]} / ${audioProgress[2]}`:t('만드는 중이에요. 다른 학습을 해도 괜찮아요.');
  return <View style={{gap:8}}>
   <T s="label">{format==='video'?t('전체 대화 영상 · MP4'):t('최종 리포트 · PDF')}</T>
-  {pending||loading||busy||preparing?<View style={{flexDirection:'row',gap:8,alignItems:'center'}} accessibilityLiveRegion="polite"><ActivityIndicator/><T s="small" style={{flex:1}}>{t(pending?'만드는 중이에요. 다른 학습을 해도 괜찮아요.':'파일 준비 중…')}</T></View>:null}
+  {pending||loading||busy||preparing?<View style={{flexDirection:'row',gap:8,alignItems:'center'}} accessibilityLiveRegion="polite"><ActivityIndicator/><T s="small" style={{flex:1}}>{pending?progress:t('파일 준비 중…')}</T></View>:null}
   {job?.status==='failed'?<View accessibilityRole="alert"><T s="small">{t('파일 생성에 실패했어요. 다시 만들 수 있어요.')}</T></View>:null}
   {error?<View style={{gap:8}} accessibilityRole="alert"><T s="small">{t(error)}</T><Btn label={t('다시 시도')} small kind="line" onPress={()=>{setError('');setPrepared(null);setAttempt(x=>x+1);}}/></View>:null}
   {!pending?<Btn label={t(label)} kind={format==='video'?'dark':'line'} icon={format==='video'?'video':'file-text'} disabled={loading||busy||(job?.status==='ready'&&!prepared)} onPress={job?.status==='ready'?save:start}/>:null}

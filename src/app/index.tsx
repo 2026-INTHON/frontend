@@ -33,14 +33,13 @@ export default function Welcome() {
           busy={acc.busy}
           onPress={async () => {
             const r = await acc.login();
-            // 성공하거나 로그인 서버가 꺼져 있으면(데모) 바로 홈으로
-            if (r.ok || r.reason === 'disabled') {
+            if (r.ok) {
               router.replace('/onboarding/lang');
             }
           }}
         />
         <Btn label={t('로그인 없이 시작하기')} kind="ghost" small onPress={() => { setDemo(false); router.push('/onboarding/lang'); }} />
-        {acc.msg && acc.enabled !== false ? <T s="small" style={{ textAlign: 'center' }}>{t(acc.msg)}</T> : null}
+        {acc.msg ? <T s="small" style={{ textAlign: 'center' }}>{t(acc.msg)}</T> : null}
       </View>
     </Screen>
   );
