@@ -136,7 +136,7 @@ export type ApiChapter = { id: string; no?: number; title: string; translation?:
 const unwrap = (j: any) => (j && typeof j === 'object' && 'data' in j && ('meta' in j || Object.keys(j).length <= 2) ? j.data : j);
 
 export class ApiError extends Error {
-  constructor(public status: number, public code: string | undefined, msg: string) {
+  constructor(public status: number, public code: string | undefined, msg: string, public retryAfter?: number) {
     super(msg);
   }
 }
@@ -151,7 +151,8 @@ async function raw<T>(path: string, init: RequestInit = {}, bearer: string | nul
     const res = await fetch(API_BASE + path, { ...init, headers, signal: ctl.signal });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      throw new ApiError(res.status, body?.error?.code, body?.error?.message || `HTTP ${res.status}`);
+      const retryAfter = Number(res.headers.get('Retry-After') ?? body?.error?.details?.retryAfter);
+      throw new ApiError(res.status, body?.error?.code, body?.error?.message || `HTTP ${res.status}`, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined);
     }
     if (res.status === 204) return undefined as T;
     return unwrap(await res.json()) as T;
