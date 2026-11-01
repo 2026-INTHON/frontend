@@ -5,6 +5,17 @@ import {stripTypeScriptTypes} from 'node:module';
 import vm from 'node:vm';
 const source=file=>stripTypeScriptTypes(readFileSync(new URL('../src/lib/'+file,import.meta.url),'utf8').replace(/^import .*;$/gm,'').replace(/^export /gm,''),{mode:'transform'});
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
+test('Server guest/member kind survives refresh and repairs persisted guest identity without clearing history',async()=>{
+ let stored=JSON.stringify({accessToken:'old',user:{id:'guest-1',kind:'guest'}});
+ const context=vm.createContext({Platform:{OS:'web'},localStorage:{getItem:()=>stored,setItem:(_,v)=>stored=v,removeItem:()=>assert.fail('Guest data must not be cleared')}});
+ vm.runInContext(source('tokens.ts')+'\nthis.tokens={getTokens,setTokens};',context);
+ assert.equal((await context.tokens.getTokens()).user.isGuest,true);
+ await context.tokens.setTokens({accessToken:'refreshed',user:{id:'guest-1',kind:'guest'}});
+ assert.equal((await context.tokens.getTokens()).user.isGuest,true);
+ assert.equal(JSON.parse(stored).user.id,'guest-1');
+ await context.tokens.setTokens({accessToken:'member',user:{id:'member-1',kind:'member',isGuest:true}});
+ assert.equal((await context.tokens.getTokens()).user.isGuest,false);
+});
 test('API preserves server rate-limit cooldown for speech retries',async()=>{
  const {api}=setup(async()=>Response.json({error:{code:'RATE_LIMITED',message:'wait'}},{status:429,headers:{'Retry-After':'42'}}),{accessToken:'token'});
  await assert.rejects(api.realtimeSession('ko'),error=>error.status===429&&error.retryAfter===42);

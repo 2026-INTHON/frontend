@@ -1,6 +1,14 @@
 // 공통 번역 리소스: 한국어 원문(키) → [English, 日本語, 简体中文]
 // 새 문구는 화면에서 t('한국어')로 쓰고 여기에 세 언어를 더해요. 없으면 한국어 원문이 그대로 보여요.
 export const DICT: Record<string, [string, string, string]> = {
+  "초기 화면으로 이동": ["Back to initial setup", "初期設定に戻る", "返回初始设置"],
+  "학습 기록은 유지하고 언어 선택부터 다시 시작해요.": ["Keep your learning history and start again from language selection.", "学習記録を残したまま、言語選択からやり直せます。", "保留学习记录，从语言选择重新开始。"],
+  "파일이 완성되면 아래 저장 버튼을 눌러 주세요.": ["When your file is ready, tap the download or save button below.", "ファイルが完成したら、下の保存ボタンを押してください。", "文件生成后，请点击下方下载或保存按钮。"],
+  "영상 다운로드": ["Download video", "動画をダウンロード", "下载视频"],
+  "PDF 다운로드": ["Download PDF", "PDFをダウンロード", "下载 PDF"],
+  "상세 리포트를 준비하고 있어요.": ["Preparing your detailed report…", "詳細レポートを準備中…", "正在准备详细报告…"],
+  "파일을 완성하고 있어요.": ["Finishing your file…", "ファイルを仕上げています…", "正在完成文件…"],
+  "음성을 준비하고 있어요.": ["Preparing speech…", "音声を準備中…", "正在准备语音…"],
   "학습 저장하기": ["Save your practice", "学習を保存", "保存学习记录"],
   "영상에는 전체 대화·캐릭터 반응·점수가 담겨요. 내 답변은 텍스트로 저장돼요.": ["Includes the full conversation, character reactions and score. Your answers appear as text.", "会話全体・キャラクターの反応・スコアを動画にします。あなたの返答はテキストで保存されます。", "视频包含完整对话、角色反应和得分。你的回答以文字保存。"],
   "완성된 영상은 공유 메뉴에서 저장하거나 파일로 다운로드할 수 있어요.": ["Save the video from the share menu, or download the file.", "共有メニューから動画を保存するか、ファイルをダウンロードできます。", "可通过分享菜单保存视频，或下载文件。"],
