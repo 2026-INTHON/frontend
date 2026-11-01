@@ -116,7 +116,7 @@ export default function SceneScreen() {
         setHearts(e.lives);
         setLine(e.line);
         setReady(true);
-        st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, char: e.char, persona: e.persona, status: 'playing', progress: e.progress(), at: new Date().toISOString() } });
+        st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, lang: st.lang, char: e.char, persona: e.persona, status: 'playing', progress: e.progress(), at: new Date().toISOString() } });
       })
       .catch((err) => request === loadRequest.current && setLoadErr(err instanceof SceneError ? err.message : t('장면을 불러오지 못했어요. 다시 시도해 주세요.')));
   }
@@ -424,7 +424,7 @@ export default function SceneScreen() {
   function saveProgress(status: 'playing' | 'paused' = 'playing') {
     const e = eng.current;
     if (!e) return;
-    st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, char: e.char, persona: e.persona, status, progress: e.progress(), at: new Date().toISOString() } });
+    st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, lang: st.lang, char: e.char, persona: e.persona, status, progress: e.progress(), at: new Date().toISOString() } });
   }
 
   // 속마음 힌트: 1단계 단서 → 2단계 속마음

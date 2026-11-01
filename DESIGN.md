@@ -9,7 +9,6 @@ colors:
   background: "#F3F2EE"
   primary: "#D4FF4F"
   white: "#FFFFFF"
-  profileSurface: "rgba(255,255,255,0.94)"
   danger: "#FF4D4F"
 typography:
   sans:
@@ -57,7 +56,7 @@ Character expressions use the server's transparent image URL, with the bundled p
 
 Profile disclosure contains seven concise rows only: name, occupation, age, hobbies, favorite foods, dislikes and current interests. `/characters/{characterId}/personalities/{personalityId}/profile?language=…` owns translated card facts; `profileCopy` owns labels. Raw prompt biographies, relationship lectures and sample speech do not appear on the card. Locale is for international students learning Korean; Japanese support does not imply Japan-specific business flows.
 
-Home follows the supplied photo-card reference: character and background fill the hero, a white bottom card overlaps the artwork, and the black state tag sits above the scene title. The subtitle combines character, personality and actual status. The progress track uses the saved current checkpoint (completed cards are full; a new next scene starts at zero), never a sample percentage. Two navigation tiles and the main action stay below the hero. Short viewports scroll rather than shrinking the artwork away. The profile toggle remains at the artwork's upper right and reveals the existing translucent, scrollable profile above the footer.
+Home follows the supplied photo-card reference: character and background fill the hero, a white bottom card overlaps the artwork, and the black state tag sits above the scene title. The subtitle combines character, personality and actual status. The progress track uses the saved current checkpoint (completed cards are full; a new next scene starts at zero), never a sample percentage. Two navigation tiles and the main action stay below the hero. Short viewports scroll rather than shrinking the artwork away. A 44px white ⋯ button sits at the artwork's upper right and opens the character traits sheet.
 
 Language selection is required once before learning: 한국어, 日本語, English and 中文, using bundled Twemoji flags and 74px radio cards. This language controls explanations and translated subtitles; the learning pack remains Korean. Switching language filters old subtitles by language and requests fresh chapter/briefing translations. Existing users confirm the language once; Settings reopens the same screen. Translation errors offer retry rather than displaying another language. Entry briefings show one situation sentence and one learning-goal sentence only in the selected guide language, including labels. Do not duplicate Korean source text or add simulation/turn-count boilerplate.
 
@@ -65,7 +64,7 @@ After each answer, the current O/△/X/? symbol appears in a 48px upper-right bu
 
 Personality photo cards reuse existing character assets: cheerful uses a smile, picky uses a mild frown, calm retains the bundled portrait. `personaPhoto` selects known reactions from the public asset catalog and excludes ending art. Card geometry and selection remain stable while images load; offline or broken images retain the bundled portrait. No image generation occurs on selection.
 
-The home character artwork has a 44px circular profile disclosure at its upper right. `CharacterProfileOverlay` owns this non-modal inline layer: white 94% opacity, scrollable content, close toggle and Escape on web. The covered artwork cannot start a scene or take keyboard focus; footer and navigation stay available. `C.profileSurface` owns the surface color. Profile content comes from the selected server personality, with explicit loading, unavailable, error and retry states. Switching character/personality closes the disclosure and never shows the previous profile.
+The home character artwork has a 44px circular ⋯ button at its upper right (no refresh/loading icon). It opens `CharacterTraitsSheet`, the same bottom sheet as the ⋯ on the character list: `GET /characters/{id}/personalities/{id}/profile?language=` summarized as age · occupation, hobbies, dislikes and current interests (at most three items each), in the selected UI language. Loading and error states are explicit, with retry. Switching character, personality or language discards the previous response.
 
 Demo mode controls the learning script and local evaluation; it does not select a device narrator. All character speech uses authenticated, cached server MP3s. Failure preserves text and offers replay. No silent fallback to device TTS. Author-defined demo reaction emotions are independent of learner score. Runtime checks: lint, typecheck, test:voice and web export; browser verification includes the existing demo scene and replay.
 
