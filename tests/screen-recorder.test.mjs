@@ -57,6 +57,14 @@ test('Browser Stop sharing finalizes a downloadable WebM with a matching extensi
  const x=setup({mime:'video/webm'});await x.rec.start('a','/scene/a');x.video.end();await tick();
  assert.equal(x.rec.getSnapshot().phase,'ready');x.rec.download();assert.match(x.downloads[0].download,/\.webm$/);
 });
+test('Browsers offering both containers use VP8/Opus; MP4-only browsers choose their own H.264 profile',async()=>{
+ for(const [offered,expected] of [['video/','video/webm;codecs=vp8,opus'],['video/mp4','video/mp4']]){
+  const x=setup({mime:offered});await x.rec.start('a','/scene/a');
+  assert.equal(x.recorders[0].mimeType,expected);
+  await x.rec.stop();assert.equal(x.rec.getSnapshot().mime,expected);
+  x.rec.download();assert.ok(x.downloads[0].download.endsWith(expected.includes('webm')?'.webm':'.mp4'));
+ }
+});
 test('Lost microphone stops rather than silently recording mute; the partial recording remains saveable',async()=>{
  const x=setup();await x.rec.start('a','/scene/a');x.microphone.end();await tick();
  assert.equal(x.rec.getSnapshot().phase,'ready');assert.match(x.rec.getSnapshot().notice,/음성/);assert.ok(x.tracks.every(t=>t.stopped));

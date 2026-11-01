@@ -87,7 +87,9 @@ export class ScreenRecorder {
       c.context.createMediaStreamSource(mic).connect(c.micGain);
       c.micGain.connect(mix);
       const stream = this.keep(c, new MediaStream([video, ...mix.stream.getAudioTracks()]));
-      const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm'].find(x => MediaRecorder.isTypeSupported(x));
+      // Prefer VP8 for live tab capture. Do not force a low H.264 level on a
+      // high-DPI/cropped source, whose resolution can change during recording.
+      const mime = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(x => MediaRecorder.isTypeSupported(x));
       if (!mime) throw new Error('이 브라우저에서는 앱 녹화를 지원하지 않아요. PC Chrome·Edge 또는 기기의 화면 녹화를 사용해 주세요.');
       const recorder = c.recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 3_000_000, audioBitsPerSecond: 128_000 });
       c.done = new Promise(resolve => { c.resolve = resolve; });

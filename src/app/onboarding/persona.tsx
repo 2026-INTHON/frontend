@@ -16,7 +16,7 @@ const SLOTS = [-2, -1, 0, 1, 2];
 
 // 05 성격 고르기: 카드 3장이 펼쳐지고, 고르면 바로 장면 시작
 export default function PersonaPick() {
-  const { char, persona, set } = useStore();
+  const { char, persona, onboarded, set } = useStore();
   const [images, setImages] = useState<CharacterImage[]>([]);
   const [failedImages, setFailedImages] = useState<string[]>([]);
   useEffect(() => {
@@ -27,13 +27,14 @@ export default function PersonaPick() {
     return () => { active = false; };
   }, []);
   const list = PERSONAS[char];
-  const [sel, setSel] = useState<PersonaId>(persona);
+  const initialPersona = char === 'seoyun' && !onboarded ? 'tease' : persona;
+  const [sel, setSel] = useState<PersonaId>(initialPersona);
   const c = charById(char);
   const cur = list.find((p) => p.id === sel)!;
   // 카드 순서 [왼쪽, 가운데, 오른쪽]
   const [order, setOrder] = useState<PersonaId[]>(() => {
-    const o = list.filter((p) => p.id !== persona).map((p) => p.id);
-    return [o[0], persona, o[1]];
+    const o = list.filter((p) => p.id !== initialPersona).map((p) => p.id);
+    return [o[0], initialPersona, o[1]];
   });
   const pos = useRef(Object.fromEntries(order.map((id, i) => [id, new Animated.Value(i - 1)])) as Record<PersonaId, Animated.Value>).current;
   const busy = useRef(false);
