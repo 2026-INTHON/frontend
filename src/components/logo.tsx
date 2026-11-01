@@ -4,6 +4,7 @@ import { Image } from 'react-native';
 const SRC = { ink: require('../../assets/img/logo-ink.png'), white: require('../../assets/img/logo-white.png') };
 const RATIO = 1500 / 468;
 
-export function Logo({ height = 40, tone = 'ink' }: { height?: number; tone?: 'ink' | 'white' }) {
-  return <Image source={SRC[tone]} style={{ height, width: height * RATIO }} resizeMode="contain" accessibilityRole="image" accessibilityLabel="Malo" />;
+export function Logo({ height = 40, tone = 'ink', maxWidth }: { height?: number; tone?: 'ink' | 'white'; maxWidth?: number }) {
+  const h = maxWidth == null ? height : Math.min(height, maxWidth / RATIO);
+  return <Image source={SRC[tone]} style={{ height: h, width: h * RATIO }} resizeMode="contain" accessibilityRole="image" accessibilityLabel="Malo" />;
 }
