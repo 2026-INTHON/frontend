@@ -28,6 +28,7 @@ export type TurnRec = { npc: string; said: string; mark: Mark; reply: string; wh
 
 // 결과 화면에 보여 줄 마지막 결과
 export type LastResult = {
+  recordingId?: string; // local screen capture, never uploaded
   sessionId?: string | null; // 서버 세션 (상세 보고서 조회)
   sceneId: string;
   title: string;

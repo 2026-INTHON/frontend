@@ -11,6 +11,7 @@ import { ReactionBadge } from '../components/scene-parts';
 import type { Emotion } from '../lib/api';
 import { ReportCard } from '../components/report-card';
 import { ExportCard } from '../components/export-card';
+import { RecordingResult } from '../components/screen-recording';
 import { EndingDialogue, RecapCard } from '../components/ending-story';
 import { api, ApiError } from '../lib/api';
 import { Ending, normEnding } from '../lib/engine';
@@ -65,6 +66,7 @@ export default function Result() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
+        <RecordingResult owner={r.recordingId} />
         {/* Keep the deployed full character / final dialogue, with PR #49's report below. */}
         <T s="small">{r.title || t('장면 완료')}</T>
         {ending?<EndingDialogue ending={ending} char={char} sessionId={live?r.sessionId:null} pack={st.pack}/>:null}

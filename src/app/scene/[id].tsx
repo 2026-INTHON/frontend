@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ImageBackground, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as haptic from '../../lib/haptics';
@@ -18,6 +18,8 @@ import { shareConversation } from '../../lib/share-log';
 import { useLang, useT } from '../../lib/i18n';
 import { reactionCopy, speechErrorCopy } from '../../lib/learning-copy';
 import { CharacterActor } from '../../components/character-actor';
+import { SceneRecordingButton } from '../../components/screen-recording';
+import { screenRecorder } from '../../lib/screen-recorder';
 
 type Phase = 'brief' | 'talk' | 'typing' | 'listening' | 'recognizing' | 'recognized';
 type Log = { who: 'char' | 'me'; text: string; mark?: Mark; line?: Line; audio?: string | null }; // line·audio: 내보내기용 음성
@@ -29,6 +31,7 @@ const TONE: Record<string, string> = { office: 'rgba(220,224,229,0.35)', cafe: '
 export default function SceneScreen() {
   const { id, retryOf } = useLocalSearchParams<{ id: string; retryOf?: string }>();
   const sceneId = String(id ?? 'today');
+  const recordingId = `${useId()}:${sceneId}:${retryOf ?? ''}`;
   const st = useStore();
   const ins = useSafeAreaInsets();
   const rec = useRec();
@@ -66,7 +69,10 @@ export default function SceneScreen() {
   const [log, setLog] = useState<Log[]>([]);
   const [sharing, setSharing] = useState(false);
   const myAudio = useRef<string | null>(null); // 방금 녹음한 내 목소리 (파일 녹음일 때만)
-  const holdAt = useRef(0);
+  const micActive = useRef(false);
+  const micStarting = useRef(false);
+  const micRequest = useRef(0);
+  const [micPreparing, setMicPreparing] = useState(false);
   const sending = useRef(false);
   const finishing = useRef(false);
   const review = useRef<{ said: string; better: string; why: string }[]>([]); // 결과 화면 '복습할 표현'
@@ -126,6 +132,10 @@ export default function SceneScreen() {
     start();
     return () => {
       invalidateLoad();
+      micRequest.current++;
+      micActive.current = false;
+      screenRecorder.setMicrophoneActive(recordingId, false);
+      if (!finishing.current) void screenRecorder.stop();
       voiceRequest.current++;
       stopSpeak();
       player.current?.remove();
@@ -133,7 +143,7 @@ export default function SceneScreen() {
       rt.current?.close();
       rt.current = null;
     };
-  }, [sceneId, st.hydrated, st.demo, st.pack, st.lang, st.char, st.persona, retryOf]);
+  }, [sceneId, st.hydrated, st.demo, st.pack, st.lang, st.char, st.persona, retryOf, recordingId]);
 
   const canRealtime = () => eng.current?.mode === 'live' && realtimeSupported();
   // 전사 세션은 micDown에서만 발급. 텍스트 대화·결과 화면에는 필요하지 않아요.
@@ -211,40 +221,68 @@ export default function SceneScreen() {
 
   // ----- 말하기 -----
   async function micDown() {
-    if (phase === 'listening') return micStop();
-    holdAt.current = now();
+    if (micActive.current) return micStop();
+    if (micStarting.current) return;
+    const request = ++micRequest.current;
+    micStarting.current = true;
+    setMicPreparing(true);
     stopPlay();
     haptic.tap();
     setNotice(null);
     setPreview('');
-    if (canRealtime()) {
-      try {
-        if (!rt.current) rt.current = new RealtimeTranscriber(st.pack);
-        rt.current.onPreview = setPreview;
-        rt.current.onAutoStop = () => micStop();
-        await rt.current.start();
-        recMode.current = 'rt';
-        setRtStat({ ms: 0, level: -60 });
-        setPhase('listening');
-        return;
-      } catch {
-        rt.current?.close(); // 실시간이 안 되면 파일 녹음으로
+    try {
+      if (canRealtime()) {
+        try {
+          if (!rt.current) rt.current = new RealtimeTranscriber(st.pack);
+          rt.current.onPreview = setPreview;
+          rt.current.onAutoStop = () => micStop();
+          await rt.current.start();
+          if (request !== micRequest.current) { rt.current?.close(); return; }
+          recMode.current = 'rt';
+          setRtStat({ ms: 0, level: -60 });
+          micActive.current = true;
+          screenRecorder.setMicrophoneActive(recordingId, true);
+          setPhase('listening');
+          return;
+        } catch {
+          rt.current?.close(); // 실시간이 안 되면 파일 녹음으로
+          if (request !== micRequest.current) return;
+        }
       }
+      recMode.current = 'file';
+      const ok = await rec.start();
+      if (request !== micRequest.current) { if (ok) await rec.stop(); return; }
+      if (!ok) {
+        screenRecorder.setMicrophoneActive(recordingId, false);
+        setNotice(t('마이크를 켜지 못했어요. 직접 입력해 주세요.'));
+        setPhase('typing');
+        return;
+      }
+      micActive.current = true;
+      screenRecorder.setMicrophoneActive(recordingId, true);
+      setPhase('listening');
+    } finally {
+      micStarting.current = false;
+      if (request === micRequest.current) setMicPreparing(false);
     }
-    recMode.current = 'file';
-    const ok = await rec.start();
-    if (!ok) {
-      setNotice(t('마이크를 켜지 못했어요. 직접 입력해 주세요.'));
-      setPhase('typing');
-      return;
-    }
-    setPhase('listening');
   }
-  function micUp() {
-    // 길게 눌렀다 떼면 끝, 짧게 탭했으면 다시 탭할 때 끝
-    if (now() - holdAt.current > 450) micStop();
+  function cancelMic() {
+    micRequest.current++;
+    screenRecorder.setMicrophoneActive(recordingId, false);
+    micActive.current = false;
+    setMicPreparing(false);
+    rt.current?.close();
+    if (recMode.current === 'file') void rec.stop();
+  }
+  function openPause() {
+    if (micActive.current) void micStop();
+    else if (micStarting.current) cancelMic();
+    setPause(true);
   }
   async function micStop() {
+    screenRecorder.setMicrophoneActive(recordingId, false);
+    if (!micActive.current) return;
+    micActive.current = false;
     if (recMode.current === 'rt') {
       setPhase('recognizing');
       try {
@@ -459,12 +497,12 @@ export default function SceneScreen() {
       f = { sessionId: null, passed: null, grade: null, score: null, best: '', worst: '', coins: 0, mistakes: 0, fixed: [], reach: null, infer: null, self: null, ending: null, nextSceneId: null };
     }
     // 오늘 첫 장면이면 연속 출석 +1, 보상 코인도 여기서 한 번만
-    st.completeScene({ sessionId: f.sessionId, sceneId: e.sceneId, title: (lang !== 'ko' && e.brief.translation?.title) || e.title, goal: (lang !== 'ko' && e.brief.translation?.goal) || e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId, review: review.current.slice(-3), turns: [...turns.current], char: e.char, persona: e.persona, saved: turns.current.filter((x) => x.mistakeId).length });
+    st.completeScene({ recordingId, sessionId: f.sessionId, sceneId: e.sceneId, title: (lang !== 'ko' && e.brief.translation?.title) || e.title, goal: (lang !== 'ko' && e.brief.translation?.goal) || e.brief.goal, passed: f.passed, grade: f.grade, score: f.score, coins: f.coins, mistakes: f.mistakes, fixed: f.fixed, best: f.best, worst: f.worst, reach: f.reach, infer: f.infer, self: f.self, ending: f.ending, nextSceneId: f.nextSceneId, review: review.current.slice(-3), turns: [...turns.current], char: e.char, persona: e.persona, saved: turns.current.filter((x) => x.mistakeId).length });
     router.replace('/result');
   }
 
   const listening = phase === 'listening';
-  const busy = phase === 'recognizing';
+  const busy = phase === 'recognizing' || micPreparing;
   const showDock = (phase === 'talk' || listening || busy) && !judging && ready && !ended;
   const sec = Math.floor((recMode.current === 'rt' ? rtStat.ms : rec.ms) / 1000);
   // 상황·목표: 서버 번역이 있으면 선택 언어로, 한국어 원문은 아래 작게
@@ -489,10 +527,11 @@ export default function SceneScreen() {
       </View>
 
       {/* 상단 단축바 */}
-      <View style={{ position: 'absolute', top: ins.top + 8, left: 16, right: 16, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ position: 'absolute', zIndex: 10, top: ins.top + 8, left: 16, right: 16, flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', gap: 4, backgroundColor: C.white, borderRadius: 999, padding: 4 }}>
-          <IconBtn name="pause" size={36} bg={C.white} label={t('일시정지')} onPress={() => setPause(true)} />
+          <IconBtn name="pause" size={36} bg={C.white} label={t('일시정지')} onPress={openPause} />
           <IconBtn name="message-square" size={36} bg={C.white} label={t('대화 내역')} onPress={() => setHistory(true)} />
+          <SceneRecordingButton owner={recordingId} route={`/scene/${sceneId}`} onStarted={() => screenRecorder.setMicrophoneActive(recordingId, micActive.current)} />
         </View>
         <View style={{ flex: 1 }} />
         {/* 체력은 서버 장면에서만 (연습용 예시 대화는 체력으로 멈추지 않아요) */}
@@ -627,17 +666,17 @@ export default function SceneScreen() {
           {/* 입력 도크: 텍스트 입력 / 음성 */}
           {showDock ? (
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 44, marginTop: 4 }}>
-              <Pressable disabled={busy} onPress={() => { setNotice(null); setPhase('typing'); }} accessibilityRole="button" accessibilityLabel={t('텍스트로 입력')} style={{ alignItems: 'center', gap: 6, opacity: busy ? 0.4 : 1 }}>
+              <Pressable disabled={busy} onPress={() => { cancelMic(); setNotice(null); setPhase('typing'); }} accessibilityRole="button" accessibilityLabel={t('텍스트로 입력')} style={{ alignItems: 'center', gap: 6, opacity: busy ? 0.4 : 1 }}>
                 <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="keypad-outline" size={22} color={C.ink} />
                 </View>
                 <T s="small" style={{ color: C.ink }}>{t('텍스트 입력')}</T>
               </Pressable>
-              <Pressable disabled={busy} onPressIn={micDown} onPressOut={micUp} accessibilityRole="button" accessibilityLabel={listening ? t('말하기 끝내기') : t('말하기 시작')} style={{ alignItems: 'center', gap: 6 }}>
+              <Pressable disabled={busy} onPress={micDown} accessibilityRole="button" accessibilityLabel={listening ? t('말하기 끝내기') : t('말하기 시작')} style={{ alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: busy ? C.line : listening ? C.lime : C.ink, borderWidth: listening ? 3 : 0, borderColor: C.ink, alignItems: 'center', justifyContent: 'center' }}>
                   {listening ? <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: C.ink }} /> : <Feather name="mic" size={28} color={busy ? C.sub : C.lime} />}
                 </View>
-                <T s="small" style={{ color: C.ink }}>{busy ? t('글자로 바꾸는 중…') : listening ? t('듣는 중…') : t('눌러서 말하기')}</T>
+                <T s="small" style={{ color: C.ink }}>{micPreparing ? t('마이크 준비 중…') : busy ? t('글자로 바꾸는 중…') : listening ? t('듣는 중…') : t('눌러서 말하기')}</T>
               </Pressable>
               <View style={{ width: 52 }} />
             </View>
@@ -826,7 +865,7 @@ export default function SceneScreen() {
       {/* 일시정지 */}
       <Modal visible={pause} transparent animationType="fade" onRequestClose={() => setPause(false)}>
         <View style={{ ...FRAME, backgroundColor: C.dim, justifyContent: 'center', padding: 24 }}>
-          <View style={{ backgroundColor: C.white, borderRadius: 24, padding: 24, gap: 10, width: '100%', maxWidth: 382, alignSelf: 'center' }}>
+          <ScrollView style={{ backgroundColor: C.white, borderRadius: 24, maxHeight: '90%', width: '100%', maxWidth: 382, alignSelf: 'center' }} contentContainerStyle={{ padding: 24, gap: 10 }}>
             <IconBtn name="pause" bg={C.lime} />
             <T s="h2">{t('잠깐 멈췄어요')}</T>
             <T s="sub">{t('지금 나가도 여기까지 저장돼요.\n다음에 이어서 할 수 있어요.')}</T>
@@ -834,7 +873,7 @@ export default function SceneScreen() {
             <Btn label={st.soundEffects ? reactionCopy(st.lang).on : reactionCopy(st.lang).off} icon={st.soundEffects ? 'volume-2' : 'volume-x'} kind="ghost" onPress={() => st.set({ soundEffects: !st.soundEffects })} />
             <Btn label={t('설정')} kind="ghost" onPress={() => { setPause(false); router.push('/settings'); }} />
             <Btn label={t('나가기')} kind="line" onPress={() => { setPause(false); stopSpeak(); eng.current?.pause(); saveProgress('paused'); router.replace('/home'); }} />
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
