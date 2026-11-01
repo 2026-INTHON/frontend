@@ -38,7 +38,8 @@ export async function googleConfig() {
         : null,
     };
   } catch {
-    cfg = { enabled: false, client: null }; // 서버에 못 닿으면 '준비 중'
+    // A transient failure must not disable login until the next full reload.
+    return { enabled: false, client: null };
   }
   return cfg;
 }

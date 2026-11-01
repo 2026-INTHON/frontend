@@ -17,8 +17,7 @@ export function useAccount() {
   const login = useCallback(async (): Promise<LoginResult> => {
     setBusy(true);
     setMsg(null);
-    const r = await signInWithGoogle();
-    setBusy(false);
+    const r: LoginResult = await signInWithGoogle().catch(() => ({ ok: false as const, reason: 'error' as const, message: '네트워크를 확인해 주세요' })).finally(() => setBusy(false));
     if (r.ok) setUser(r.user);
     else if (r.reason === 'cancel') setMsg('로그인을 취소했어요. 게스트 기록은 그대로예요.');
     else if (r.reason === 'disabled') setMsg('Google 로그인은 준비 중이에요.');
