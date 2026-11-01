@@ -116,7 +116,7 @@ export default function SceneScreen() {
         setHearts(e.lives);
         setLine(e.line);
         setReady(true);
-        st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, char: e.char, persona: e.persona, status: 'playing', progress: e.progress(), at: new Date().toISOString() } });
+        st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, lang: st.lang, char: e.char, persona: e.persona, status: 'playing', progress: e.progress(), at: new Date().toISOString() } });
       })
       .catch((err) => request === loadRequest.current && setLoadErr(err instanceof SceneError ? err.message : t('장면을 불러오지 못했어요. 다시 시도해 주세요.')));
   }
@@ -136,12 +136,7 @@ export default function SceneScreen() {
   }, [sceneId, st.hydrated, st.demo, st.pack, st.lang, st.char, st.persona, retryOf]);
 
   const canRealtime = () => eng.current?.mode === 'live' && realtimeSupported();
-  // 말할 차례가 되면 전사 연결을 미리 준비 (실패해도 녹음 버튼은 파일 방식으로 동작)
-  useEffect(() => {
-    if (phase !== 'talk' || !canRealtime()) return;
-    if (!rt.current) rt.current = new RealtimeTranscriber(st.pack);
-    rt.current.prepare().catch(() => null);
-  }, [phase]);
+  // 전사 세션은 micDown에서만 발급. 텍스트 대화·결과 화면에는 필요하지 않아요.
   // 녹음 중 시간·소리 크기
   useEffect(() => {
     if (phase !== 'listening' || recMode.current !== 'rt') return;
@@ -424,7 +419,7 @@ export default function SceneScreen() {
   function saveProgress(status: 'playing' | 'paused' = 'playing') {
     const e = eng.current;
     if (!e) return;
-    st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, char: e.char, persona: e.persona, status, progress: e.progress(), at: new Date().toISOString() } });
+    st.set({ lastPlayed: { sceneId: e.sceneId, title: e.title, lang: st.lang, char: e.char, persona: e.persona, status, progress: e.progress(), at: new Date().toISOString() } });
   }
 
   // 속마음 힌트: 1단계 단서 → 2단계 속마음

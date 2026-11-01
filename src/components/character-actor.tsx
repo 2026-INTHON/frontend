@@ -65,7 +65,8 @@ export function CharacterActor({uri, fallback, emotion='neutral', eventKey, top,
       style={{position:'absolute',top,alignSelf:'center',width:shown.uri?'100%':'62%',height:'72%',opacity:actor}}
       resizeMode="contain" accessibilityLabel={`${name} · ${label}`} />
     {visible&&active&&emotion!=='neutral'?<Animated.View accessible accessibilityLabel={`${name} · ${label}`} accessibilityLiveRegion="polite"
-      style={{position:'absolute',top:top+80,right:'8%',width:66,minHeight:76,borderRadius:24,borderBottomLeftRadius:5,backgroundColor:C.white,borderWidth:1,borderColor:C.line,alignItems:'center',justifyContent:'center',gap:4,paddingVertical:10,opacity:bubble,
+      // Keep 30px clear of the hint control (24px inset + 50px width).
+      style={{position:'absolute',top:top+80,right:104,width:66,minHeight:76,borderRadius:24,borderBottomLeftRadius:5,backgroundColor:C.white,borderWidth:1,borderColor:C.line,alignItems:'center',justifyContent:'center',gap:4,paddingVertical:10,opacity:bubble,
         transform:reduceMotion?[]:[{scale:bubble.interpolate({inputRange:[0,1],outputRange:[0.72,1]})},{translateY:bubble.interpolate({inputRange:[0,1],outputRange:[8,0]})}]}}>
       {emotion==='angry'?<T style={{fontSize:30,lineHeight:35}}>💢</T>:<Feather name={emotion==='happy'?'smile':emotion==='sad'?'droplet':'help-circle'} size={30} color={C.ink} />}
       <T style={{fontSize:11,lineHeight:16}}>{label}</T>

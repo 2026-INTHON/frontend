@@ -9,7 +9,6 @@ colors:
   background: "#F3F2EE"
   primary: "#D4FF4F"
   white: "#FFFFFF"
-  profileSurface: "rgba(255,255,255,0.94)"
   danger: "#FF4D4F"
 typography:
   sans:
@@ -51,13 +50,17 @@ Runtime R in `src/lib/theme.ts` owns card 20, button 28 and pill 999 radii. This
 Scene playback owns its session player; `src/lib/voice.ts` owns demo-ending and expression-practice playback. Both use the same server voice contract. A stale response must not start an old line. Existing notice text and ending error/replay state own recoverable audio errors.
 
 ## Patterns
+Home's scene title, state and progress occupy a solid white full-width footer, including its outer padding. The café background ends above this footer; it must not show around the text panel.
+
+Realtime transcription connects only on microphone input and reuses its live socket across turns. Text entry and report/export screens never prewarm a speech session. Pending connection requests are shared, leaving the scene cancels them, and rate-limit retries respect the server cooldown while file recording remains available.
+
 Ending character art uses `contain` for both server and bundled assets inside its reserved image frame. Never crop a full-body reaction with `cover`: the face and full pose must remain visible at narrow and wide card widths. The same `EndingDialogue` owns current results and reopened saved endings.
 
-Character expressions use the server's transparent image URL, with the bundled portrait as a loading/error fallback. `CharacterActor` preloads changes, fades the new pose in, and shows a brief speech-bubble reaction to the character's right. The actor emotion is independent of O/△/X/? learning judgment. Happy, angry, sad and confused reactions have quiet original local audio cues; Settings and pause controls share a persisted sound-effects toggle. Reduced motion uses a static brief reaction. Replays, input typing and unrelated state updates must not retrigger a reaction; recording, pause and unmount stop effects. Existing C colors and Feather icons own the visual treatment.
+Character expressions use the server's transparent image URL, with the bundled portrait as a loading/error fallback. `CharacterActor` preloads changes, fades the new pose in, and shows a brief speech-bubble reaction to the character's right. The bubble sits 104px inside the scene's right edge, leaving 30px between it and the 50px hint control at a 24px inset, including at narrow mobile widths. The actor emotion is independent of O/△/X/? learning judgment. Happy, angry, sad and confused reactions have quiet original local audio cues; Settings and pause controls share a persisted sound-effects toggle. Reduced motion uses a static brief reaction. Replays, input typing and unrelated state updates must not retrigger a reaction; recording, pause and unmount stop effects. Existing C colors and Feather icons own the visual treatment.
 
 Profile disclosure contains seven concise rows only: name, occupation, age, hobbies, favorite foods, dislikes and current interests. `/characters/{characterId}/personalities/{personalityId}/profile?language=…` owns translated card facts; `profileCopy` owns labels. Raw prompt biographies, relationship lectures and sample speech do not appear on the card. Locale is for international students learning Korean; Japanese support does not imply Japan-specific business flows.
 
-Home follows the supplied photo-card reference: character and background fill the hero, a white bottom card overlaps the artwork, and the black state tag sits above the scene title. The subtitle combines character, personality and actual status. The progress track uses the saved current checkpoint (completed cards are full; a new next scene starts at zero), never a sample percentage. Two navigation tiles and the main action stay below the hero. Short viewports scroll rather than shrinking the artwork away. The profile toggle remains at the artwork's upper right and reveals the existing translucent, scrollable profile above the footer.
+Home follows the supplied photo-card reference: character and background fill the hero, a white bottom card overlaps the artwork, and the black state tag sits above the scene title. The subtitle combines character, personality and actual status. The progress track uses the saved current checkpoint (completed cards are full; a new next scene starts at zero), never a sample percentage. Two navigation tiles and the main action stay below the hero. Short viewports scroll rather than shrinking the artwork away. A 44px white ⋯ button sits at the artwork's upper right and opens the character traits sheet.
 
 Language selection is required once before learning: 한국어, 日本語, English and 中文, using bundled Twemoji flags and 74px radio cards. This language controls explanations and translated subtitles; the learning pack remains Korean. Switching language filters old subtitles by language and requests fresh chapter/briefing translations. Existing users confirm the language once; Settings reopens the same screen. Translation errors offer retry rather than displaying another language. Entry briefings show one situation sentence and one learning-goal sentence only in the selected guide language, including labels. Do not duplicate Korean source text or add simulation/turn-count boilerplate.
 
@@ -65,7 +68,7 @@ After each answer, the current O/△/X/? symbol appears in a 48px upper-right bu
 
 Personality photo cards reuse existing character assets: cheerful uses a smile, picky uses a mild frown, calm retains the bundled portrait. `personaPhoto` selects known reactions from the public asset catalog and excludes ending art. Card geometry and selection remain stable while images load; offline or broken images retain the bundled portrait. No image generation occurs on selection.
 
-The home character artwork has a 44px circular profile disclosure at its upper right. `CharacterProfileOverlay` owns this non-modal inline layer: white 94% opacity, scrollable content, close toggle and Escape on web. The covered artwork cannot start a scene or take keyboard focus; footer and navigation stay available. `C.profileSurface` owns the surface color. Profile content comes from the selected server personality, with explicit loading, unavailable, error and retry states. Switching character/personality closes the disclosure and never shows the previous profile.
+The home character artwork has a 44px circular ⋯ button at its upper right (no refresh/loading icon). It opens `CharacterTraitsSheet`, the same bottom sheet as the ⋯ on the character list: `GET /characters/{id}/personalities/{id}/profile?language=` summarized as age · occupation, hobbies, dislikes and current interests (at most three items each), in the selected UI language. Loading and error states are explicit, with retry. Switching character, personality or language discards the previous response.
 
 Demo mode controls the learning script and local evaluation; it does not select a device narrator. All character speech uses authenticated, cached server MP3s. Failure preserves text and offers replay. No silent fallback to device TTS. Author-defined demo reaction emotions are independent of learner score. Runtime checks: lint, typecheck, test:voice and web export; browser verification includes the existing demo scene and replay.
 

@@ -1,4 +1,4 @@
-import { api, absUrl, ApiError, ApiEnding, Briefing, HintRes, PlaySession, RawCue, Render, SubmitTurnResult } from './api';
+import { api, absUrl, ApiError, ApiEnding, ApiSub, Briefing, HintRes, PlaySession, RawCue, Render, SubmitTurnResult } from './api';
 import { judge } from './judge';
 import { tr } from './i18n';
 import { subtitleText } from './learning-copy';
@@ -304,13 +304,22 @@ export async function resolveTodayScene(char: CharId, persona: PersonaId, pack: 
   const subs = chapters.filter((c) => !c.locked && c.generationStatus !== 'generating').flatMap((c) => c.subs ?? []);
   const ok = (s: (typeof subs)[number]) => !!s.sceneId && (s.availability ?? 'ready') === 'ready' && s.state !== 'locked';
   const pick = subs.find((s) => ok(s) && s.state === 'now') ?? subs.find((s) => ok(s) && s.state === 'open') ?? subs.find(ok);
-  if (pick?.sceneId) return { sceneId: pick.sceneId, title: pick.translation && pick.translation.language === language ? pick.translation.title : pick.title };
+  if (pick?.sceneId) return { sceneId: pick.sceneId, title: subTitle(pick, language) };
   // 챕터가 비어 있으면 공개 장면 목록에서 같은 캐릭터·성격
   // 짧은 예시보다 8회 교육과정(gf-1-1, prof-1-1 등)을 먼저
   const list = await api.scenes({ pack, characterId: SERVER_CHAR[char] });
   const best = list.find((x) => x.source === 'curriculum') ?? list.find((x) => x.personalityId === SERVER_PERSONA[persona]) ?? list[0];
   return best ? { sceneId: best.id, title: best.title } : null;
 }
+
+// 홈 '이어하기': 저장된 장면 제목은 그때 언어라서, 챕터 목록에서 같은 장면을 찾아 지금 언어 제목으로
+export async function localizedSceneTitle(char: CharId, sceneId: string, pack: 'ko' | 'en', language: string): Promise<string | null> {
+  const chapters = await api.chapters({ pack, characterId: SERVER_CHAR[char], language });
+  const sub = chapters.flatMap((c) => c.subs ?? []).find((s) => s.sceneId === sceneId);
+  return sub ? subTitle(sub, language) : null;
+}
+
+const subTitle = (s: ApiSub, language?: string) => (s.translation && s.translation.language === language ? s.translation.title : s.title);
 
 export async function liveEngine(sceneId: string, o: { pack: 'ko' | 'en'; lang: string; char: CharId; persona: PersonaId; retryOf?: string }): Promise<Engine> {
   const L = (ko: string, v?: Record<string, string | number>) => tr(o.lang, ko, v);
