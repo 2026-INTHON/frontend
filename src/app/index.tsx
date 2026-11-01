@@ -18,11 +18,11 @@ export default function Welcome() {
   if (onboarded && languageSelected) return <Redirect href="/home" />;
   const start = () => { setDemo(false); router.push('/onboarding/lang'); };
   return (
-    <Screen bg={C.white}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: 56 }}>
+    <Screen bg={C.bg}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: 40 }}>
         <View style={{ paddingHorizontal: 24 }}>
-          <T s="h1">Welcome!</T>
-          <View style={{ marginTop: 10, marginBottom: 8 }}><Logo height={68} /></View>
+          <T s="h1" style={{ fontSize: 30, lineHeight: 40 }}>Welcome!</T>
+          <View style={{ marginTop: 10, marginBottom: 8 }}><Logo height={96} maxWidth={Math.min(width, 430) - 72} /></View>
           <T s="sub" style={{ fontSize: 14, lineHeight: 21 }}>A place to practice talking where slip-ups are okay</T>
         </View>
         <View style={{ flex: 1, minHeight: Math.min(width, 430) * .78, paddingHorizontal: 8, marginTop: 32, marginBottom: 20 }}>
